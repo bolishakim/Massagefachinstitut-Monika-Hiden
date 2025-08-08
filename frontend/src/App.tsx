@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@/hooks/useTheme';
-import { AuthProvider } from '@/hooks/useAuth';
+import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useBreadcrumbs } from '@/components/layout/Breadcrumb';
@@ -15,18 +15,20 @@ import { Role } from '@/types';
 function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const breadcrumbs = useBreadcrumbs(location.pathname);
+  const { user: authUser } = useAuth();
   
-  // Mock user - in real app this would come from auth context
-  const mockUser = {
-    id: '1',
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    role: 'admin'
-  };
+  // Transform auth user to match AppLayout user interface
+  const user = authUser ? {
+    id: authUser.id,
+    name: `${authUser.firstName} ${authUser.lastName}`,
+    email: authUser.email,
+    avatar: authUser.avatar,
+    role: authUser.role.toLowerCase()
+  } : undefined;
 
   return (
     <AppLayout
-      user={mockUser}
+      user={user}
       currentPath={location.pathname}
       breadcrumbs={breadcrumbs}
     >

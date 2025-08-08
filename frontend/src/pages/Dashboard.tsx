@@ -6,15 +6,10 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Grid, GridItem } from '../components/ui/Grid';
 import { Stack, Inline } from '../components/ui/Layout';
+import { useAuth } from '../hooks/useAuth';
 
-interface DashboardProps {
-  user?: {
-    name: string;
-    role: string;
-  };
-}
-
-export function DashboardPage({ user }: DashboardProps) {
+export function DashboardPage() {
+  const { user } = useAuth();
   const stats = [
     {
       title: 'Total Users',
@@ -57,7 +52,7 @@ export function DashboardPage({ user }: DashboardProps) {
     <div className="space-y-8">
       {/* Welcome Section */}
       <div>
-        <H1>Welcome back, {user?.name || 'User'}!</H1>
+        <H1>Welcome back, {user ? `${user.firstName} ${user.lastName}` : 'User'}!</H1>
         <TextMD className="text-muted-foreground mt-2">
           Here's what's happening with your business today.
         </TextMD>

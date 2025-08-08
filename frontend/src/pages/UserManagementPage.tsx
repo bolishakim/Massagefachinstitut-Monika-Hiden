@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users,
   Plus,
@@ -12,81 +12,217 @@ import {
   Shield,
   Mail,
   Calendar,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/components/layout/ProtectedRoute';
 import { User, Role } from '@/types';
-import { userService } from '@/services/user';
+import { userService, CreateUserRequest, UpdateUserRequest } from '@/services/user';
+import { UserModal, UserFormData } from '@/components/modals/UserModal';
+import { DeleteUserModal, ToggleUserStatusModal } from '@/components/modals/ConfirmModal';
+
+interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
 
 export function UserManagementPage() {
   const { user: currentUser } = useAuth();
   const { isAdmin } = usePermissions();
+  
+  // State for users data
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
 
+  // State for filtering and search
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<Role | ''>('');
+  const [statusFilter, setStatusFilter] = useState<'true' | 'false' | ''>('');
+
+  // State for modals and UI
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [userModalLoading, setUserModalLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load users on component mount and when filters change
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [pagination.currentPage, searchTerm, roleFilter, statusFilter]);
 
-  const loadUsers = async () => {
+  const loadUsers = async (page: number = pagination.currentPage) => {
     try {
       setLoading(true);
-      // For now, using mock data since the backend endpoint isn't fully implemented
-      const mockUsers: User[] = [
-        {
-          id: '1',
-          email: 'admin@example.com',
-          firstName: 'Admin',
-          lastName: 'User',
-          role: Role.ADMIN,
-          isActive: true,
-          emailVerified: true,
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z',
-        },
-        {
-          id: '2',
-          email: 'moderator@example.com',
-          firstName: 'Moderator',
-          lastName: 'User',
-          role: Role.MODERATOR,
-          isActive: true,
-          emailVerified: true,
-          createdAt: '2024-01-02T00:00:00Z',
-          updatedAt: '2024-01-02T00:00:00Z',
-        },
-        {
-          id: '3',
-          email: 'user@example.com',
-          firstName: 'Regular',
-          lastName: 'User',
-          role: Role.USER,
-          isActive: false,
-          emailVerified: false,
-          createdAt: '2024-01-03T00:00:00Z',
-          updatedAt: '2024-01-03T00:00:00Z',
-        },
-      ];
-      setUsers(mockUsers);
+      setError(null);
+      
+      const response = await userService.getUsers(page, 10, {
+        search: searchTerm || undefined,
+        role: roleFilter || undefined,
+        isActive: statusFilter || undefined,
+      });
+
+      if (response.success) {
+        setUsers(response.data);
+        if (response.pagination) {
+          setPagination(response.pagination);
+        }
+      } else {
+        setError('Failed to load users');
+      }
     } catch (error) {
       console.error('Failed to load users:', error);
+      setError('Failed to load users. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Handle user creation
+  const handleCreateUser = async (userData: UserFormData) => {
+    try {
+      setUserModalLoading(true);
+      const createData: CreateUserRequest = {
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        password: userData.password!,
+        role: userData.role,
+      };
+
+      const response = await userService.createUser(createData);
+      
+      if (response.success) {
+        await loadUsers(1); // Reload from first page
+        setShowUserModal(false);
+        setSelectedUser(null);
+      } else {
+        throw new Error(response.error || 'Failed to create user');
+      }
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error; // Let the modal handle the error display
+    } finally {
+      setUserModalLoading(false);
+    }
+  };
+
+  // Handle user update
+  const handleUpdateUser = async (userData: UserFormData) => {
+    if (!selectedUser) return;
+
+    try {
+      setUserModalLoading(true);
+      const updateData: UpdateUserRequest = {
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        role: userData.role,
+      };
+
+      const response = await userService.updateUser(selectedUser.id, updateData);
+      
+      if (response.success) {
+        await loadUsers(); // Reload current page
+        setShowUserModal(false);
+        setSelectedUser(null);
+      } else {
+        throw new Error(response.error || 'Failed to update user');
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error; // Let the modal handle the error display
+    } finally {
+      setUserModalLoading(false);
+    }
+  };
+
+  // Handle user deletion
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setDeleteLoading(true);
+      const response = await userService.deleteUser(selectedUser.id);
+      
+      if (response.success) {
+        await loadUsers(); // Reload current page
+        setShowDeleteModal(false);
+        setSelectedUser(null);
+      } else {
+        throw new Error(response.error || 'Failed to delete user');
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      setError('Failed to delete user. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Handle user status toggle
+  const handleToggleStatus = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setStatusLoading(true);
+      const response = await userService.toggleUserStatus(selectedUser.id);
+      
+      if (response.success) {
+        await loadUsers(); // Reload current page
+        setShowStatusModal(false);
+        setSelectedUser(null);
+      } else {
+        throw new Error(response.error || 'Failed to toggle user status');
+      }
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+      setError('Failed to update user status. Please try again.');
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  // Modal handlers
+  const openCreateModal = () => {
+    setSelectedUser(null);
+    setShowUserModal(true);
+  };
+
+  const openEditModal = (user: User) => {
+    setSelectedUser(user);
+    setShowUserModal(true);
+  };
+
+  const openDeleteModal = (user: User) => {
+    setSelectedUser(user);
+    setShowDeleteModal(true);
+  };
+
+  const openStatusModal = (user: User) => {
+    setSelectedUser(user);
+    setShowStatusModal(true);
+  };
+
+  // Utility functions
+  const getUserDisplayName = (user: User) => `${user.firstName} ${user.lastName}`;
 
   const getRoleColor = (role: Role) => {
     switch (role) {
@@ -99,16 +235,6 @@ export function UserManagementPage() {
     }
   };
 
-  const handleToggleStatus = async (userId: string) => {
-    // Implement toggle status logic
-    console.log('Toggle status for user:', userId);
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      console.log('Delete user:', userId);
-    }
-  };
 
   if (loading) {
     return (
@@ -139,7 +265,7 @@ export function UserManagementPage() {
             </p>
           </div>
           {isAdmin() && (
-            <Button onClick={() => setShowCreateModal(true)}>
+            <Button onClick={openCreateModal}>
               <Plus className="h-4 w-4 mr-2" />
               Add User
             </Button>
@@ -174,10 +300,33 @@ export function UserManagementPage() {
           </CardContent>
         </Card>
 
+        {/* Error Display */}
+        {error && (
+          <Card className="border-destructive bg-destructive/10">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                <span>{error}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setError(null)}
+                  className="ml-auto"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Users Table */}
         <Card className="glass">
           <CardHeader>
-            <CardTitle>Users ({filteredUsers.length})</CardTitle>
+            <CardTitle>
+              Users ({pagination.totalCount})
+              {loading && <span className="text-muted-foreground text-sm ml-2">Loading...</span>}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -193,7 +342,7 @@ export function UserManagementPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((user, index) => (
+                  {users.map((user, index) => (
                     <motion.tr
                       key={user.id}
                       initial={{ opacity: 0, x: -20 }}
@@ -270,14 +419,16 @@ export function UserManagementPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => setSelectedUser(user)}
+                                onClick={() => openEditModal(user)}
+                                title="Edit user"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleToggleStatus(user.id)}
+                                onClick={() => openStatusModal(user)}
+                                title={user.isActive ? 'Deactivate user' : 'Activate user'}
                               >
                                 {user.isActive ? (
                                   <UserX className="h-4 w-4" />
@@ -288,8 +439,9 @@ export function UserManagementPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDeleteUser(user.id)}
+                                onClick={() => openDeleteModal(user)}
                                 className="text-destructive hover:text-destructive"
+                                title="Delete user"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -306,18 +458,92 @@ export function UserManagementPage() {
               </table>
             </div>
 
-            {filteredUsers.length === 0 && (
+            {!loading && users.length === 0 && (
               <div className="text-center py-12">
                 <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium">No users found</h3>
                 <p className="text-muted-foreground">
                   {searchTerm ? 'Try adjusting your search terms' : 'No users available'}
                 </p>
+                {isAdmin() && !searchTerm && (
+                  <Button onClick={openCreateModal} className="mt-4">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First User
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <Card className="glass">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing {((pagination.currentPage - 1) * 10) + 1} to {Math.min(pagination.currentPage * 10, pagination.totalCount)} of {pagination.totalCount} users
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => loadUsers(pagination.currentPage - 1)}
+                    disabled={!pagination.hasPreviousPage || loading}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Page {pagination.currentPage} of {pagination.totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => loadUsers(pagination.currentPage + 1)}
+                    disabled={!pagination.hasNextPage || loading}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </motion.div>
+
+      {/* Modals */}
+      <UserModal
+        isOpen={showUserModal}
+        onClose={() => {
+          setShowUserModal(false);
+          setSelectedUser(null);
+        }}
+        onSave={selectedUser ? handleUpdateUser : handleCreateUser}
+        user={selectedUser}
+        loading={userModalLoading}
+      />
+
+      <DeleteUserModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedUser(null);
+        }}
+        onConfirm={handleDeleteUser}
+        userName={selectedUser ? getUserDisplayName(selectedUser) : ''}
+        loading={deleteLoading}
+      />
+
+      <ToggleUserStatusModal
+        isOpen={showStatusModal}
+        onClose={() => {
+          setShowStatusModal(false);
+          setSelectedUser(null);
+        }}
+        onConfirm={handleToggleStatus}
+        userName={selectedUser ? getUserDisplayName(selectedUser) : ''}
+        currentStatus={selectedUser?.isActive || false}
+        loading={statusLoading}
+      />
     </div>
   );
 }

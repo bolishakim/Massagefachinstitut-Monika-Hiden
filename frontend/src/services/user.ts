@@ -17,8 +17,21 @@ export interface UpdateUserRequest {
 }
 
 export class UserService {
-  async getUsers(page: number = 1, limit: number = 10): Promise<PaginatedResponse<User>> {
-    return apiService.get<User[]>(`/users?page=${page}&limit=${limit}`);
+  async getUsers(
+    page: number = 1, 
+    limit: number = 10, 
+    filters: { search?: string; role?: string; isActive?: string } = {}
+  ): Promise<PaginatedResponse<User>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    
+    if (filters.search) params.append('search', filters.search);
+    if (filters.role) params.append('role', filters.role);
+    if (filters.isActive) params.append('isActive', filters.isActive);
+    
+    return apiService.get<User[]>(`/users?${params.toString()}`);
   }
 
   async getUserById(id: string): Promise<ApiResponse<User>> {

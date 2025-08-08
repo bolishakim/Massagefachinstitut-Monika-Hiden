@@ -17,6 +17,7 @@ import { clsx } from 'clsx';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { useTheme } from '../../hooks/useTheme';
+import { useAuth } from '../../hooks/useAuth';
 
 interface HeaderProps {
   user?: {
@@ -37,6 +38,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
   const [searchFocused, setSearchFocused] = useState(false);
 
   const { theme, setTheme, isDark } = useTheme();
+  const { logout } = useAuth();
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -346,9 +348,9 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
                     <div className="border-t border-border py-2">
                       <button
                         className="flex items-center w-full px-4 py-2 text-sm text-destructive hover:bg-accent transition-colors"
-                        onClick={() => {
-                          // Handle logout
-                          console.log('Logout clicked');
+                        onClick={async () => {
+                          setUserMenuOpen(false);
+                          await logout();
                         }}
                       >
                         <LogOut className="h-4 w-4 mr-3" />

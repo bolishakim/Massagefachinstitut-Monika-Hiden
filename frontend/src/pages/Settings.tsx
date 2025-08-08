@@ -24,18 +24,9 @@ import { Stack } from '../components/ui/Layout';
 import { Badge } from '../components/ui/Badge';
 import { Divider } from '../components/ui/Layout';
 import { useTheme } from '../hooks/useTheme';
+import { useAuth } from '../hooks/useAuth';
 
-interface SettingsProps {
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    avatar?: string;
-    role: string;
-  };
-}
-
-export function SettingsPage({ user }: SettingsProps) {
+export function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
   const [notifications, setNotifications] = useState({
     email: true,
@@ -44,6 +35,7 @@ export function SettingsPage({ user }: SettingsProps) {
   });
 
   const { theme, setTheme, isDark } = useTheme();
+  const { user } = useAuth();
 
   const settingsTabs = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -92,10 +84,10 @@ export function SettingsPage({ user }: SettingsProps) {
                 <div className="flex items-center space-x-4">
                   <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center">
                     {user?.avatar ? (
-                      <img src={user.avatar} alt={user.name} className="w-20 h-20 rounded-full" />
+                      <img src={user.avatar} alt={`${user.firstName} ${user.lastName}`} className="w-20 h-20 rounded-full" />
                     ) : (
                       <span className="text-primary-foreground text-2xl font-bold">
-                        {user?.name?.charAt(0).toUpperCase()}
+                        {user?.firstName?.charAt(0).toUpperCase()}{user?.lastName?.charAt(0).toUpperCase()}
                       </span>
                     )}
                   </div>
@@ -109,17 +101,23 @@ export function SettingsPage({ user }: SettingsProps) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                    label="Full Name"
-                    defaultValue={user?.name || ''}
-                    placeholder="Enter your full name"
+                    label="First Name"
+                    defaultValue={user?.firstName || ''}
+                    placeholder="Enter your first name"
                   />
                   <Input
-                    label="Email Address"
-                    type="email"
-                    defaultValue={user?.email || ''}
-                    placeholder="Enter your email"
+                    label="Last Name"
+                    defaultValue={user?.lastName || ''}
+                    placeholder="Enter your last name"
                   />
                 </div>
+
+                <Input
+                  label="Email Address"
+                  type="email"
+                  defaultValue={user?.email || ''}
+                  placeholder="Enter your email"
+                />
 
                 <Input
                   label="Bio"
