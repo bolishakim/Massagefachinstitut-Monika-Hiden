@@ -76,3 +76,82 @@ export interface ResetPasswordForm {
   password: string;
   confirmPassword: string;
 }
+
+// AI Assistant types
+export interface FileMetadata {
+  name: string;
+  size: number;
+  type: string;
+  lastModified: number;
+  checksum?: string;
+  dimensions?: {
+    width: number;
+    height: number;
+  };
+  duration?: number;
+  pageCount?: number;
+}
+
+export interface MessageFile {
+  data: File;
+  metadata: FileMetadata;
+  preview?: string;
+}
+
+export type MessageType = 'text' | 'voice' | 'file' | 'system';
+
+export interface ChatMessage {
+  id: string;
+  type: MessageType;
+  content: string;
+  files?: MessageFile[];
+  sender: 'user' | 'assistant';
+  timestamp: string;
+  status: 'sending' | 'sent' | 'error';
+  sessionId?: string;
+}
+
+export interface UserContext {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userRole: string;
+  sessionId: string;
+  timestamp: string;
+}
+
+export interface AssistantWebhookPayload {
+  message: string;
+  messageType: MessageType;
+  files?: {
+    data: string; // base64 encoded
+    metadata: FileMetadata;
+  }[];
+  userContext: UserContext;
+}
+
+export interface AssistantResponse {
+  success: boolean;
+  data?: {
+    message: string;
+    messageId?: string;
+    suggestions?: string[];
+  };
+  error?: string;
+}
+
+export interface VoiceRecordingState {
+  isRecording: boolean;
+  duration: number;
+  audioBlob?: Blob;
+  audioURL?: string;
+  error?: string;
+}
+
+export interface AssistantSettings {
+  webhookUrl: string;
+  maxFileSize: number;
+  supportedFileTypes: string[];
+  voiceEnabled: boolean;
+  fileUploadEnabled: boolean;
+}

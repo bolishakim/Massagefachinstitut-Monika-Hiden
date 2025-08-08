@@ -285,7 +285,7 @@ function App() {
 
 ## 🌐 Current Environment
 
-- **Development Server**: Running at `http://localhost:3000/`
+- **Development Server**: Running at `http://localhost:3100/`
 - **Database**: PostgreSQL with Prisma ORM (structure ready)
 - **Authentication**: JWT-based auth system (frontend + backend ready)
 - **Theme System**: Fully functional with persistence

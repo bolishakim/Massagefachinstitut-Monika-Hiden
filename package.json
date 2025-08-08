@@ -1,0 +1,17 @@
+{
+  "name": "web-app-fullstack",
+  "version": "1.0.0",
+  "description": "Full-stack web application with React frontend and Node.js backend",
+  "scripts": {
+    "dev": "node start-dev.js",
+    "start": "node start-dev.js",
+    "dev:split": "./start-dev-vscode.sh",
+    "dev:simple": "./start-dev.sh"
+  },
+  "keywords": ["react", "nodejs", "typescript", "fullstack"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

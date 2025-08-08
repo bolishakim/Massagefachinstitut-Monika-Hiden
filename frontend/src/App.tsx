@@ -9,7 +9,9 @@ import { AuthPage } from '@/pages/AuthPage';
 import { DashboardPage } from '@/pages/Dashboard';
 import { UserManagementPage } from '@/pages/UserManagementPage';
 import { SettingsPage } from '@/pages/Settings';
+import { AssistantPage } from '@/pages/AssistantPage';
 import { Role } from '@/types';
+import '@/styles/markdown.css';
 
 // Layout wrapper component that provides breadcrumbs and user context
 function LayoutWrapper({ children }: { children: React.ReactNode }) {
@@ -40,7 +42,7 @@ function LayoutWrapper({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <ThemeProvider>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
           <Routes>
             {/* Public routes */}
@@ -53,6 +55,17 @@ function App() {
                 <ProtectedRoute>
                   <LayoutWrapper>
                     <DashboardPage user={{ name: 'John Doe', role: 'admin' }} />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/assistant"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <AssistantPage />
                   </LayoutWrapper>
                 </ProtectedRoute>
               }

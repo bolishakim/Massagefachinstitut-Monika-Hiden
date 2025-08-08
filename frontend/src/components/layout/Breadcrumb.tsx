@@ -79,6 +79,7 @@ export function useBreadcrumbs(currentPath?: string): BreadcrumbItem[] {
   // Route mapping for better labels
   const routeLabels: Record<string, string> = {
     dashboard: 'Dashboard',
+    assistant: 'AI Assistant',
     users: 'Users',
     products: 'Products',
     orders: 'Orders',

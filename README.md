@@ -142,7 +142,7 @@ DATABASE_URL=postgresql://practice_user:practice_password@localhost:5432/practic
 NODE_ENV=development
 PORT=3050
 JWT_SECRET=your-secret-key
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGIN=http://localhost:3100
 ```
 
 ### Frontend (.env)

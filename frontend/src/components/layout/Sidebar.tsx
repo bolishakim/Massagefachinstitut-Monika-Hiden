@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   ChevronLeft,
-  Search
+  Search,
+  Bot
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Button } from '../ui/Button';
@@ -41,6 +42,13 @@ const navigationItems: NavItem[] = [
     label: 'Dashboard',
     icon: Home,
     href: '/dashboard',
+  },
+  {
+    id: 'assistant',
+    label: 'AI Assistant',
+    icon: Bot,
+    href: '/assistant',
+    badge: 'AI',
   },
   {
     id: 'analytics',
