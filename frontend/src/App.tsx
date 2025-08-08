@@ -1,17 +1,43 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from 'next-themes';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { ThemeProvider } from '@/hooks/useTheme';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
-import { Layout } from '@/components/layout/Layout';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { useBreadcrumbs } from '@/components/layout/Breadcrumb';
 import { AuthPage } from '@/pages/AuthPage';
-import { DashboardPage } from '@/pages/DashboardPage';
+import { DashboardPage } from '@/pages/Dashboard';
 import { UserManagementPage } from '@/pages/UserManagementPage';
+import { SettingsPage } from '@/pages/Settings';
 import { Role } from '@/types';
+
+// Layout wrapper component that provides breadcrumbs and user context
+function LayoutWrapper({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const breadcrumbs = useBreadcrumbs(location.pathname);
+  
+  // Mock user - in real app this would come from auth context
+  const mockUser = {
+    id: '1',
+    name: 'John Doe',
+    email: 'john.doe@example.com',
+    role: 'admin'
+  };
+
+  return (
+    <AppLayout
+      user={mockUser}
+      currentPath={location.pathname}
+      breadcrumbs={breadcrumbs}
+    >
+      {children}
+    </AppLayout>
+  );
+}
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeProvider>
       <Router>
         <AuthProvider>
           <Routes>
@@ -23,9 +49,9 @@ function App() {
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Layout>
-                    <DashboardPage />
-                  </Layout>
+                  <LayoutWrapper>
+                    <DashboardPage user={{ name: 'John Doe', role: 'admin' }} />
+                  </LayoutWrapper>
                 </ProtectedRoute>
               }
             />
@@ -34,9 +60,9 @@ function App() {
               path="/users"
               element={
                 <ProtectedRoute requiredRoles={[Role.ADMIN, Role.MODERATOR]}>
-                  <Layout>
+                  <LayoutWrapper>
                     <UserManagementPage />
-                  </Layout>
+                  </LayoutWrapper>
                 </ProtectedRoute>
               }
             />
@@ -45,12 +71,12 @@ function App() {
               path="/profile"
               element={
                 <ProtectedRoute>
-                  <Layout>
-                    <div className="container mx-auto px-4 py-8">
+                  <LayoutWrapper>
+                    <div className="space-y-6">
                       <h1 className="text-3xl font-bold">Profile</h1>
                       <p className="text-muted-foreground">Profile page coming soon...</p>
                     </div>
-                  </Layout>
+                  </LayoutWrapper>
                 </ProtectedRoute>
               }
             />
@@ -59,12 +85,52 @@ function App() {
               path="/settings"
               element={
                 <ProtectedRoute>
-                  <Layout>
-                    <div className="container mx-auto px-4 py-8">
-                      <h1 className="text-3xl font-bold">Settings</h1>
-                      <p className="text-muted-foreground">Settings page coming soon...</p>
+                  <LayoutWrapper>
+                    <SettingsPage user={{ id: '1', name: 'John Doe', email: 'john.doe@example.com', role: 'admin' }} />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Additional routes for demo */}
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute requiredRoles={[Role.ADMIN, Role.MODERATOR]}>
+                  <LayoutWrapper>
+                    <div className="space-y-6">
+                      <h1 className="text-3xl font-bold">Analytics</h1>
+                      <p className="text-muted-foreground">Analytics page coming soon...</p>
                     </div>
-                  </Layout>
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/products"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <div className="space-y-6">
+                      <h1 className="text-3xl font-bold">Products</h1>
+                      <p className="text-muted-foreground">Products page coming soon...</p>
+                    </div>
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <div className="space-y-6">
+                      <h1 className="text-3xl font-bold">Orders</h1>
+                      <p className="text-muted-foreground">Orders page coming soon...</p>
+                    </div>
+                  </LayoutWrapper>
                 </ProtectedRoute>
               }
             />
