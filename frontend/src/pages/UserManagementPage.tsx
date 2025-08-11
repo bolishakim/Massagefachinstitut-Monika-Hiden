@@ -13,6 +13,8 @@ import {
   Mail,
   Calendar,
   AlertCircle,
+  Filter,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -275,27 +277,70 @@ export function UserManagementPage() {
         {/* Search and Filters */}
         <Card className="glass">
           <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Benutzer nach Name oder E-Mail suchen..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+              {/* Search Bar - Centered */}
+              <div className="flex-1 max-w-lg">
+                <div className="relative w-full">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Benutzer nach Name oder E-Mail suchen..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full h-10"
+                  />
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  Alle Benutzer ({users.length})
-                </Button>
-                <Button variant="outline" size="sm">
-                  Aktiv ({users.filter((u) => u.isActive).length})
-                </Button>
-                <Button variant="outline" size="sm">
-                  Inaktiv ({users.filter((u) => !u.isActive).length})
-                </Button>
+
+              {/* Role Filter */}
+              <div className="relative min-w-[140px]">
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value as Role | '')}
+                  className="w-full px-3 py-2 h-10 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent appearance-none pr-8"
+                >
+                  <option value="">Alle Rollen</option>
+                  <option value={Role.ADMIN}>Administrator</option>
+                  <option value={Role.MODERATOR}>Moderator</option>
+                  <option value={Role.USER}>Benutzer</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               </div>
+
+              {/* Status Filter */}
+              <div className="relative min-w-[140px]">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as 'true' | 'false' | '')}
+                  className="w-full px-3 py-2 h-10 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent appearance-none pr-8"
+                >
+                  <option value="">Alle Status</option>
+                  <option value="true">Aktiv</option>
+                  <option value="false">Inaktiv</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Filter Summary - Centered */}
+            <div className="flex flex-wrap justify-center gap-2 mt-4 pt-4 border-t border-border">
+              <Badge variant="outline" className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
+                Gesamt: {pagination.totalCount}
+              </Badge>
+              <Badge variant="outline" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                Aktiv: {users.filter((u) => u.isActive).length}
+              </Badge>
+              <Badge variant="outline" className="text-xs bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                Inaktiv: {users.filter((u) => !u.isActive).length}
+              </Badge>
+              <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                Admin: {users.filter((u) => u.role === Role.ADMIN).length}
+              </Badge>
+              <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
+                Moderator: {users.filter((u) => u.role === Role.MODERATOR).length}
+              </Badge>
+              <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                Benutzer: {users.filter((u) => u.role === Role.USER).length}
+              </Badge>
             </div>
           </CardContent>
         </Card>

@@ -200,14 +200,14 @@ const navigationItems: NavItem[] = [
       },
       {
         id: 'settings-services',
-        label: 'Services Management',
+        label: 'Dienstleistungen verwalten',
         icon: Stethoscope,
         href: '/settings/services',
         requiredRoles: ['admin', 'moderator'],
       },
       {
         id: 'settings-rooms',
-        label: 'Rooms Management',
+        label: 'Räume verwalten',
         icon: Building2,
         href: '/settings/rooms',
         requiredRoles: ['admin', 'moderator'],
@@ -248,15 +248,9 @@ export function Sidebar({ collapsed, onToggle, currentPath, userRole = 'user', i
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className={clsx(
-        'flex items-center justify-between p-4 border-b border-border',
-        collapsed && !isMobile && 'px-2'
-      )}>
-        {(!collapsed || isMobile) && (
-          <div className="flex items-center space-x-3 min-w-0 flex-1">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-              <span className="text-primary-foreground font-bold text-sm">MH</span>
-            </div>
+      <div className="flex items-center justify-between p-4 border-b border-border h-[146px]">
+        <div className="flex items-center space-x-3 min-w-0 flex-1">
+          {(!collapsed || isMobile) && (
             <div className="min-w-0 flex-1">
               {/* Show full name on larger screens, abbreviated on small */}
               <div className="block sm:hidden">
@@ -266,17 +260,14 @@ export function Sidebar({ collapsed, onToggle, currentPath, userRole = 'user', i
                 <AppName variant="elegant" />
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
         
         <Button
           variant="ghost"
           size="sm"
           onClick={onToggle}
-          className={clsx(
-            'p-1.5',
-            collapsed && !isMobile && 'w-full justify-center'
-          )}
+          className="p-1.5 flex-shrink-0"
           aria-label={collapsed ? 'Seitenleiste erweitern' : 'Seitenleiste einklappen'}
         >
           {isMobile ? (

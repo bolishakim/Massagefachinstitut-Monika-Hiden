@@ -121,7 +121,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
   };
 
   return (
-    <header className="bg-background border-b border-border sticky top-0 z-30 shadow-xl">
+    <header className="bg-muted/30 border-b border-border sticky top-0 z-30 shadow-xl">
       <div className="flex items-center justify-between px-4 py-3 md:px-6">
         {/* Left Section */}
         <div className="flex items-center space-x-4">

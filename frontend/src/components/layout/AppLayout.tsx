@@ -100,7 +100,7 @@ export function AppLayout({ children, user, currentPath, breadcrumbs }: AppLayou
         <motion.aside
           initial={false}
           animate={{
-            width: sidebarCollapsed ? 72 : 320,
+            width: sidebarCollapsed ? 58 : 256,
           }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           className="flex-shrink-0 border-r border-border bg-muted/30 shadow-xl"
@@ -161,11 +161,11 @@ export function AppLayout({ children, user, currentPath, breadcrumbs }: AppLayou
 
               {/* Sidebar */}
               <motion.aside
-                initial={{ x: -320 }}
+                initial={{ x: -256 }}
                 animate={{ x: 0 }}
-                exit={{ x: -320 }}
+                exit={{ x: -256 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="fixed left-0 top-0 z-50 h-full w-80 bg-muted/30 border-r border-border shadow-2xl"
+                className="fixed left-0 top-0 z-50 h-full w-64 bg-muted/30 border-r border-border shadow-2xl"
               >
                 <Sidebar
                   collapsed={false}

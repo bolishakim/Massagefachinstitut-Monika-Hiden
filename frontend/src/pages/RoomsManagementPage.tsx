@@ -21,6 +21,7 @@ import { Alert } from '@/components/ui/Alert';
 import { roomsService, Room, RoomFilters, CreateRoomData } from '@/services/rooms';
 import { PaginatedResponse } from '@/types';
 import { CreateRoomModal } from '@/components/forms/CreateRoomModal';
+import { ConfirmModal } from '@/components/modals/ConfirmModal';
 
 export function RoomsManagementPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -30,6 +31,9 @@ export function RoomsManagementPage() {
   const [pagination, setPagination] = useState<PaginatedResponse<Room>['pagination']>();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Load rooms from backend
   const loadRooms = async (page: number = 1) => {
@@ -74,22 +78,30 @@ export function RoomsManagementPage() {
     loadRooms();
   }, [searchTerm]);
 
-  const handleDeleteRoom = async (roomId: string, roomName: string) => {
-    if (!confirm(`Are you sure you want to delete room "${roomName}"?`)) {
-      return;
-    }
-    
+  const openDeleteModal = (room: Room) => {
+    setSelectedRoom(room);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteRoom = async () => {
+    if (!selectedRoom) return;
+
     try {
-      const response = await roomsService.deleteRoom(roomId);
+      setDeleting(true);
+      const response = await roomsService.deleteRoom(selectedRoom.id);
       
       if (response.success) {
         await loadRooms(); // Reload rooms after delete
+        setShowDeleteModal(false);
+        setSelectedRoom(null);
       } else {
         setError(response.error || 'Failed to delete room');
       }
     } catch (err) {
       console.error('Error deleting room:', err);
       setError('Network error while deleting room');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -358,7 +370,7 @@ export function RoomsManagementPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteRoom(room.id, room.name)}
+                        onClick={() => openDeleteModal(room)}
                         className="text-destructive hover:text-destructive"
                         title="Raum löschen"
                       >
@@ -404,6 +416,22 @@ export function RoomsManagementPage() {
         onClose={() => setShowCreateModal(false)}
         onSubmit={handleCreateRoom}
         isLoading={creating}
+      />
+
+      {/* Delete Room Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedRoom(null);
+        }}
+        onConfirm={handleDeleteRoom}
+        title="Raum löschen"
+        message={`Sind Sie sicher, dass Sie den Raum "${selectedRoom?.name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden und wird alle zugehörigen Daten dauerhaft entfernen.`}
+        confirmText="Raum löschen"
+        cancelText="Abbrechen"
+        type="danger"
+        loading={deleting}
       />
     </div>
   );

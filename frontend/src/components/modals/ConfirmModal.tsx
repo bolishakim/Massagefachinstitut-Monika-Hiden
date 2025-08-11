@@ -125,9 +125,10 @@ export function DeleteUserModal({
       isOpen={isOpen}
       onClose={onClose}
       onConfirm={onConfirm}
-      title="Delete User"
-      message={`Are you sure you want to delete ${userName}? This action cannot be undone and will permanently remove all user data.`}
-      confirmText="Delete User"
+      title="Benutzer löschen"
+      message={`Sind Sie sicher, dass Sie ${userName} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden und alle Benutzerdaten werden dauerhaft entfernt.`}
+      confirmText="Benutzer löschen"
+      cancelText="Abbrechen"
       type="danger"
       loading={loading}
     />

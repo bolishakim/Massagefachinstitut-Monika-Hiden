@@ -23,6 +23,7 @@ import { Alert } from '@/components/ui/Alert';
 import { servicesService, Service, ServiceCategory, ServiceFilters, CreateServiceData } from '@/services/services';
 import { PaginatedResponse } from '@/types';
 import { CreateServiceModal } from '@/components/forms/CreateServiceModal';
+import { ConfirmModal } from '@/components/modals/ConfirmModal';
 
 export function ServicesManagementPage() {
   const [services, setServices] = useState<Service[]>([]);
@@ -32,6 +33,9 @@ export function ServicesManagementPage() {
   const [pagination, setPagination] = useState<PaginatedResponse<Service>['pagination']>();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Load services from backend
   const loadServices = async (page: number = 1) => {
@@ -76,22 +80,30 @@ export function ServicesManagementPage() {
     loadServices();
   }, [searchTerm]);
 
-  const handleDeleteService = async (serviceId: string, serviceName: string) => {
-    if (!confirm(`Are you sure you want to delete service "${serviceName}"?`)) {
-      return;
-    }
-    
+  const openDeleteModal = (service: Service) => {
+    setSelectedService(service);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteService = async () => {
+    if (!selectedService) return;
+
     try {
-      const response = await servicesService.deleteService(serviceId);
+      setDeleting(true);
+      const response = await servicesService.deleteService(selectedService.id);
       
       if (response.success) {
         await loadServices(); // Reload services after delete
+        setShowDeleteModal(false);
+        setSelectedService(null);
       } else {
         setError(response.error || 'Failed to delete service');
       }
     } catch (err) {
       console.error('Error deleting service:', err);
       setError('Network error while deleting service');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -402,7 +414,7 @@ export function ServicesManagementPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteService(service.id, service.name)}
+                        onClick={() => openDeleteModal(service)}
                         className="text-destructive hover:text-destructive"
                         title="Dienstleistung löschen"
                       >
@@ -448,6 +460,22 @@ export function ServicesManagementPage() {
         onClose={() => setShowCreateModal(false)}
         onSubmit={handleCreateService}
         isLoading={creating}
+      />
+
+      {/* Delete Service Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedService(null);
+        }}
+        onConfirm={handleDeleteService}
+        title="Dienstleistung löschen"
+        message={`Sind Sie sicher, dass Sie die Dienstleistung "${selectedService?.name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden und wird alle zugehörigen Daten dauerhaft entfernen.`}
+        confirmText="Dienstleistung löschen"
+        cancelText="Abbrechen"
+        type="danger"
+        loading={deleting}
       />
     </div>
   );
