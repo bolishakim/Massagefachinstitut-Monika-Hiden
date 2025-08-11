@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (credentials: LoginForm) => Promise<{ success: boolean; error?: string }>;
+  login: (credentials: LoginForm) => Promise<{ success: boolean; error?: string; requiresMFA?: boolean; tempToken?: string }>;
   register: (userData: RegisterForm) => Promise<{ success: boolean; error?: string; emailVerificationToken?: string }>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<{ success: boolean; error?: string }>;
@@ -38,6 +38,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('Auth initialization error:', error);
       authService.clearAuth();
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -65,8 +66,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await authService.login(credentials);
       
       if (response.success && response.data) {
-        setUser(response.data.user);
-        return { success: true };
+        if (response.requiresMFA) {
+          // MFA required - return temp token but don't set user yet
+          return { 
+            success: true, 
+            requiresMFA: true, 
+            tempToken: response.data.tempToken 
+          };
+        } else {
+          // Normal login - set user and return success
+          setUser(response.data.user);
+          return { success: true };
+        }
       } else {
         return { success: false, error: response.error || 'Login failed' };
       }
@@ -136,7 +147,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const refreshUser = async () => {
-    if (isAuthenticated) {
+    if (authService.isAuthenticated()) {
       await loadUser();
     }
   };

@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginForm as LoginFormType } from '@/types';
+import { MFAInput } from './MFAInput';
+import { apiService } from '@/services/api';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -14,7 +16,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: LoginFormProps) {
-  const { login, loading } = useAuth();
+  const { login, loading, refreshUser } = useAuth();
   const [formData, setFormData] = useState<LoginFormType>({
     email: '',
     password: '',
@@ -22,6 +24,11 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
   const [errors, setErrors] = useState<Partial<LoginFormType>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [tempToken, setTempToken] = useState<string | null>(null);
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [showBackupMode, setShowBackupMode] = useState(false);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<LoginFormType> = {};
@@ -49,10 +56,49 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
     const result = await login(formData);
 
     if (result.success) {
-      onSuccess?.();
+      if (result.requiresMFA) {
+        // MFA is required
+        setMfaRequired(true);
+        setTempToken(result.tempToken);
+      } else {
+        // Login successful without MFA
+        onSuccess?.();
+      }
     } else {
       setSubmitError(result.error || 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
     }
+  };
+
+  const handleMFASubmit = async (mfaToken: string) => {
+    try {
+      setMfaLoading(true);
+      setMfaError(null);
+
+      const response = await apiService.post('/auth/login-mfa', {
+        tempToken,
+        mfaToken,
+      });
+      
+      if (response.success) {
+        // Store token and refresh user context
+        localStorage.setItem('accessToken', response.data.accessToken);
+        await refreshUser();
+        onSuccess?.();
+      } else {
+        setMfaError(response.error || 'Ungültiger Verifikationscode');
+      }
+    } catch (err: any) {
+      setMfaError(err.error || 'Netzwerkfehler aufgetreten');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleMFABack = () => {
+    setMfaRequired(false);
+    setTempToken(null);
+    setMfaError(null);
+    setShowBackupMode(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,6 +115,25 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
       setSubmitError('');
     }
   };
+
+  // Show MFA input if required
+  if (mfaRequired) {
+    return (
+      <Card className="w-full max-w-md glass">
+        <CardContent className="p-6">
+          <MFAInput
+            onSubmit={handleMFASubmit}
+            loading={mfaLoading}
+            error={mfaError}
+            onBack={handleMFABack}
+            showBackupOption={true}
+            onUseBackupCode={() => setShowBackupMode(!showBackupMode)}
+            isBackupMode={showBackupMode}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-md glass">

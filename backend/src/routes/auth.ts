@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 import {
   register,
   login,
+  loginMFA,
   logout,
   refreshToken,
   forgotPassword,
@@ -30,6 +31,12 @@ const loginValidation = [
   body('password').exists(),
 ];
 
+// MFA login validation
+const loginMFAValidation = [
+  body('tempToken').exists(),
+  body('mfaToken').isLength({ min: 6, max: 8 }).isAlphanumeric(),
+];
+
 // Password reset validation
 const resetPasswordValidation = [
   body('token').exists(),
@@ -46,6 +53,7 @@ const updateProfileValidation = [
 // Routes
 router.post('/register', registerValidation, validate, register);
 router.post('/login', loginValidation, validate, login);
+router.post('/login-mfa', loginMFAValidation, validate, loginMFA);
 router.post('/logout', logout);
 router.post('/refresh-token', refreshToken);
 router.post('/forgot-password', body('email').isEmail().normalizeEmail(), validate, forgotPassword);

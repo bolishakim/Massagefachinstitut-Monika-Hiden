@@ -37,12 +37,16 @@ export class JWTUtils {
     return process.env.JWT_REFRESH_EXPIRES_IN || '7d';
   }
 
-  static generateTokenPair(payload: TokenPayload): TokenPair {
-    const accessToken = jwt.sign(
+  static generateAccessToken(payload: TokenPayload): string {
+    return jwt.sign(
       payload,
       this.getAccessTokenSecret(),
       { expiresIn: this.getAccessTokenExpiresIn() }
     );
+  }
+
+  static generateTokenPair(payload: TokenPayload): TokenPair {
+    const accessToken = this.generateAccessToken(payload);
 
     const refreshToken = jwt.sign(
       { userId: payload.userId },

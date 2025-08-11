@@ -49,6 +49,12 @@ class ApiService {
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
+          // Don't try to refresh tokens for auth endpoints
+          const authEndpoints = ['/auth/login', '/auth/register', '/auth/refresh-token', '/auth/forgot-password', '/auth/reset-password', '/auth/verify-email'];
+          if (authEndpoints.some(endpoint => originalRequest.url?.includes(endpoint))) {
+            return Promise.reject(error);
+          }
+
           try {
             // If there's already a refresh in progress, wait for it
             if (this.refreshTokenPromise) {
@@ -66,9 +72,8 @@ class ApiService {
             return this.api(originalRequest);
           } catch (refreshError) {
             this.refreshTokenPromise = null;
-            localStorage.removeItem('accessToken');
+            this.clearAuthToken();
             console.error('Token refresh failed:', refreshError);
-            window.location.href = '/login';
             return Promise.reject(refreshError);
           }
         }

@@ -17,6 +17,7 @@ import patientHistoryRoutes from './routes/patientHistory.js';
 import serviceRoutes from './routes/services.js';
 import roomRoutes from './routes/rooms.js';
 import auditRoutes from './routes/audit.js';
+import mfaRoutes from './routes/mfa.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -105,6 +106,7 @@ app.use('/api/patient-history', patientHistoryRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/mfa', mfaRoutes);
 
 // Error handling middleware
 app.use(notFound);

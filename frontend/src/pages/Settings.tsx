@@ -25,6 +25,7 @@ import { Badge } from '../components/ui/Badge';
 import { Divider } from '../components/ui/Layout';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
+import { MFASettings } from '../components/settings/MFASettings';
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -236,25 +237,7 @@ export function SettingsPage() {
 
                 <Divider />
 
-                <div>
-                  <H3 className="text-base mb-4">Two-Factor Authentication</H3>
-                  <div className="flex items-center justify-between p-4 border border-border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Smartphone className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <TextMD className="font-medium">Authenticator App</TextMD>
-                        <TextMD className="text-muted-foreground text-sm">
-                          Use an authenticator app to generate codes
-                        </TextMD>
-                      </div>
-                    </div>
-                    <Badge variant="secondary">Not Enabled</Badge>
-                  </div>
-                  <Button variant="outline" size="sm" className="mt-2">
-                    <Key className="h-4 w-4 mr-2" />
-                    Enable 2FA
-                  </Button>
-                </div>
+                <MFASettings />
 
                 <Divider />
 

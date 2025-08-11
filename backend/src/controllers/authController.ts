@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { JWTUtils, TokenPayload } from '../utils/jwt.js';
 import { PasswordUtils } from '../utils/password.js';
+import { MFAService } from '../services/mfaService.js';
 import prisma from '../utils/db.js';
 
 export const register = async (req: Request, res: Response) => {
@@ -114,7 +115,8 @@ export const login = async (req: Request, res: Response) => {
         lastName: true,
         role: true,
         isActive: true,
-        emailVerified: true
+        emailVerified: true,
+        mfaEnabled: true
       }
     });
 
@@ -142,7 +144,32 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Generate tokens
+    // Check if MFA is enabled
+    if (user.mfaEnabled) {
+      // Generate temporary token for MFA verification
+      const tempTokenPayload = {
+        userId: user.id,
+        email: user.email,
+        requiresMFA: true
+      };
+      
+      const tempToken = JWTUtils.generateAccessToken(tempTokenPayload);
+
+      // Remove password from response
+      const { password: _, mfaEnabled: __, ...userWithoutPassword } = user;
+
+      return res.json({
+        success: true,
+        requiresMFA: true,
+        data: {
+          user: userWithoutPassword,
+          tempToken
+        },
+        message: 'MFA verification required'
+      });
+    }
+
+    // Generate tokens for non-MFA users
     const tokenPayload: TokenPayload = {
       userId: user.id,
       email: user.email,
@@ -169,10 +196,11 @@ export const login = async (req: Request, res: Response) => {
     });
 
     // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, mfaEnabled: __, ...userWithoutPassword } = user;
 
     res.json({
       success: true,
+      requiresMFA: false,
       data: {
         user: userWithoutPassword,
         accessToken
@@ -184,6 +212,99 @@ export const login = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Internal server error during login'
+    });
+  }
+};
+
+export const loginMFA = async (req: Request, res: Response) => {
+  try {
+    const { tempToken, mfaToken } = req.body;
+
+    if (!tempToken || !mfaToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'Temporary token and MFA token are required'
+      });
+    }
+
+    // Verify temporary token
+    const decoded = JWTUtils.verifyAccessToken(tempToken);
+    if (!decoded.requiresMFA) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid temporary token'
+      });
+    }
+
+    // Verify MFA token
+    const mfaResult = await MFAService.verifyMFALogin(decoded.userId, mfaToken);
+    if (!mfaResult.success) {
+      return res.status(401).json({
+        success: false,
+        error: mfaResult.error || 'Invalid MFA token'
+      });
+    }
+
+    // Get user data
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+        emailVerified: true
+      }
+    });
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not found or inactive'
+      });
+    }
+
+    // Generate final tokens
+    const tokenPayload: TokenPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role
+    };
+
+    const { accessToken, refreshToken } = JWTUtils.generateTokenPair(tokenPayload);
+
+    // Save refresh token to database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { 
+        refreshToken: JWTUtils.hashToken(refreshToken),
+        lastLoginAt: new Date()
+      }
+    });
+
+    // Set refresh token as httpOnly cookie
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    res.json({
+      success: true,
+      data: {
+        user,
+        accessToken
+      },
+      message: 'MFA login successful'
+    });
+  } catch (error) {
+    console.error('MFA login error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error during MFA login'
     });
   }
 };
