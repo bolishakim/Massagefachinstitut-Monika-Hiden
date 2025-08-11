@@ -27,11 +27,11 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
 
   const validatePassword = (password: string): string[] => {
     const requirements = [];
-    if (password.length >= 8) requirements.push('At least 8 characters');
-    if (/[a-z]/.test(password)) requirements.push('Lowercase letter');
-    if (/[A-Z]/.test(password)) requirements.push('Uppercase letter');
-    if (/\d/.test(password)) requirements.push('Number');
-    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) requirements.push('Special character');
+    if (password.length >= 8) requirements.push('Mindestens 8 Zeichen');
+    if (/[a-z]/.test(password)) requirements.push('Kleinbuchstabe');
+    if (/[A-Z]/.test(password)) requirements.push('Großbuchstabe');
+    if (/\d/.test(password)) requirements.push('Zahl');
+    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) requirements.push('Sonderzeichen');
     return requirements;
   };
 
@@ -39,25 +39,25 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
     const newErrors: Partial<RegisterFormType> = {};
 
     if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = 'Vorname ist erforderlich';
     }
 
     if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
+      newErrors.lastName = 'Nachname ist erforderlich';
     }
 
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = 'E-Mail ist erforderlich';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = 'Bitte geben Sie eine gültige E-Mail-Adresse ein';
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = 'Passwort ist erforderlich';
     } else {
       const strength = validatePassword(formData.password);
       if (strength.length < 5) {
-        newErrors.password = 'Password does not meet all requirements';
+        newErrors.password = 'Passwort erfüllt nicht alle Anforderungen';
       }
     }
 
@@ -76,7 +76,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
     if (result.success) {
       onSuccess?.(result.emailVerificationToken);
     } else {
-      setSubmitError(result.error || 'Registration failed. Please try again.');
+      setSubmitError(result.error || 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.');
     }
   };
 
@@ -103,9 +103,9 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
   return (
     <Card className="w-full max-w-md glass">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-center">Create an account</CardTitle>
+        <CardTitle className="text-center">Konto erstellen</CardTitle>
         <CardDescription className="text-center">
-          Enter your details to get started
+          Geben Sie Ihre Daten ein, um loszulegen
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -114,9 +114,9 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
             <div className="relative">
               <User className="absolute left-3 top-10 h-4 w-4 text-muted-foreground" />
               <Input
-                label="First name"
+                label="Vorname"
                 name="firstName"
-                placeholder="John"
+                placeholder="Max"
                 value={formData.firstName}
                 onChange={handleChange}
                 error={errors.firstName}
@@ -127,9 +127,9 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
             <div className="relative">
               <User className="absolute left-3 top-10 h-4 w-4 text-muted-foreground" />
               <Input
-                label="Last name"
+                label="Nachname"
                 name="lastName"
-                placeholder="Doe"
+                placeholder="Mustermann"
                 value={formData.lastName}
                 onChange={handleChange}
                 error={errors.lastName}
@@ -142,10 +142,10 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
           <div className="relative">
             <Mail className="absolute left-3 top-10 h-4 w-4 text-muted-foreground" />
             <Input
-              label="Email"
+              label="E-Mail"
               name="email"
               type="email"
-              placeholder="john@example.com"
+              placeholder="max@beispiel.com"
               value={formData.email}
               onChange={handleChange}
               error={errors.email}
@@ -157,10 +157,10 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
           <div className="relative">
             <Lock className="absolute left-3 top-10 h-4 w-4 text-muted-foreground" />
             <Input
-              label="Password"
+              label="Passwort"
               name="password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="Create a strong password"
+              placeholder="Erstellen Sie ein sicheres Passwort"
               value={formData.password}
               onChange={handleChange}
               error={errors.password}
@@ -178,14 +178,14 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
 
           {formData.password && (
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Password requirements:</p>
+              <p className="text-xs text-muted-foreground">Passwort-Anforderungen:</p>
               <div className="grid grid-cols-1 gap-1 text-xs">
                 {[
-                  'At least 8 characters',
-                  'Lowercase letter',
-                  'Uppercase letter', 
-                  'Number',
-                  'Special character'
+                  'Mindestens 8 Zeichen',
+                  'Kleinbuchstabe',
+                  'Großbuchstabe', 
+                  'Zahl',
+                  'Sonderzeichen'
                 ].map((requirement) => (
                   <div key={requirement} className="flex items-center gap-2">
                     <CheckCircle2 
@@ -224,18 +224,18 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
             loading={loading}
             disabled={loading}
           >
-            {loading ? 'Creating account...' : 'Create account'}
+            {loading ? 'Konto wird erstellt...' : 'Konto erstellen'}
             {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
 
           <div className="text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
+            Sie haben bereits ein Konto?{' '}
             <button
               type="button"
               onClick={onSwitchToLogin}
               className="text-primary hover:underline font-medium"
             >
-              Sign in
+              Anmelden
             </button>
           </div>
         </form>

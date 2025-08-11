@@ -26,12 +26,12 @@ export function ForgotPasswordForm({ onSuccess, onBackToLogin }: ForgotPasswordF
     setError('');
 
     if (!email) {
-      setError('Email is required');
+      setError('E-Mail ist erforderlich');
       return;
     }
 
     if (!validateEmail(email)) {
-      setError('Please enter a valid email address');
+      setError('Bitte geben Sie eine gültige E-Mail-Adresse ein');
       return;
     }
 
@@ -43,10 +43,10 @@ export function ForgotPasswordForm({ onSuccess, onBackToLogin }: ForgotPasswordF
         setSent(true);
         onSuccess?.();
       } else {
-        setError(response.error || 'Failed to send reset email');
+        setError(response.error || 'Fehler beim Senden der Reset-E-Mail');
       }
     } catch (error: any) {
-      setError(error.error || error.message || 'An error occurred');
+      setError(error.error || error.message || 'Ein Fehler ist aufgetreten');
     } finally {
       setLoading(false);
     }
@@ -68,15 +68,15 @@ export function ForgotPasswordForm({ onSuccess, onBackToLogin }: ForgotPasswordF
           >
             <Mail className="h-8 w-8 text-green-600" />
           </motion.div>
-          <CardTitle>Check your email</CardTitle>
+          <CardTitle>Überprüfen Sie Ihre E-Mails</CardTitle>
           <CardDescription>
-            We've sent a password reset link to {email}
+            Wir haben einen Link zum Zurücksetzen des Passworts an {email} gesendet
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground text-center">
-              Didn't receive the email? Check your spam folder or try again.
+              E-Mail nicht erhalten? Überprüfen Sie Ihren Spam-Ordner oder versuchen Sie es erneut.
             </p>
             
             <Button
@@ -84,7 +84,7 @@ export function ForgotPasswordForm({ onSuccess, onBackToLogin }: ForgotPasswordF
               className="w-full"
               onClick={() => setSent(false)}
             >
-              Try another email
+              Andere E-Mail-Adresse verwenden
             </Button>
 
             <div className="text-center">
@@ -94,7 +94,7 @@ export function ForgotPasswordForm({ onSuccess, onBackToLogin }: ForgotPasswordF
                 className="text-sm text-primary hover:underline inline-flex items-center gap-1"
               >
                 <ArrowLeft className="h-3 w-3" />
-                Back to login
+                Zurück zur Anmeldung
               </button>
             </div>
           </div>
@@ -106,9 +106,9 @@ export function ForgotPasswordForm({ onSuccess, onBackToLogin }: ForgotPasswordF
   return (
     <Card className="w-full max-w-md glass">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-center">Forgot password?</CardTitle>
+        <CardTitle className="text-center">Passwort vergessen?</CardTitle>
         <CardDescription className="text-center">
-          Enter your email and we'll send you a link to reset your password
+          Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen des Passworts
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -116,10 +116,10 @@ export function ForgotPasswordForm({ onSuccess, onBackToLogin }: ForgotPasswordF
           <div className="relative">
             <Mail className="absolute left-3 top-10 h-4 w-4 text-muted-foreground" />
             <Input
-              label="Email"
+              label="E-Mail"
               name="email"
               type="email"
-              placeholder="Enter your email"
+              placeholder="Geben Sie Ihre E-Mail-Adresse ein"
               value={email}
               onChange={handleChange}
               error={error}
@@ -144,7 +144,7 @@ export function ForgotPasswordForm({ onSuccess, onBackToLogin }: ForgotPasswordF
             loading={loading}
             disabled={loading}
           >
-            {loading ? 'Sending...' : 'Send reset link'}
+            {loading ? 'Wird gesendet...' : 'Reset-Link senden'}
             {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
 
@@ -155,7 +155,7 @@ export function ForgotPasswordForm({ onSuccess, onBackToLogin }: ForgotPasswordF
               className="text-sm text-primary hover:underline inline-flex items-center gap-1"
             >
               <ArrowLeft className="h-3 w-3" />
-              Back to login
+              Zurück zur Anmeldung
             </button>
           </div>
         </form>

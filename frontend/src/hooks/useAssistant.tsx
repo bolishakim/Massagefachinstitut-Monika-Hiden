@@ -151,7 +151,7 @@ export function useAssistant(): UseAssistantReturn {
     const welcomeMessage: ChatMessage = {
       id: generateMessageId(),
       type: 'system',
-      content: `Hello${user ? ` ${user.firstName}` : ''}! I'm your AI assistant. I can help you with text, voice messages, images, and documents. How can I assist you today?`,
+      content: `Hallo${user ? ` ${user.firstName}` : ''}! Ich bin Ihr KI-Assistent. Ich kann Ihnen bei Text-, Sprachnachrichten, Bildern und Dokumenten helfen. Wie kann ich Ihnen heute behilflich sein?`,
       sender: 'assistant',
       timestamp: new Date().toISOString(),
       status: 'sent',

@@ -10,6 +10,9 @@ import { DashboardPage } from '@/pages/Dashboard';
 import { UserManagementPage } from '@/pages/UserManagementPage';
 import { SettingsPage } from '@/pages/Settings';
 import { AssistantPage } from '@/pages/AssistantPage';
+import { PatientsPage, PatientDetailPage, PatientFormPage, PatientHistoryPage } from '@/pages/patients';
+import { ServicesManagementPage } from '@/pages/ServicesManagementPage';
+import { RoomsManagementPage } from '@/pages/RoomsManagementPage';
 import { Role } from '@/types';
 import '@/styles/markdown.css';
 
@@ -70,9 +73,87 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Patient Management Routes */}
+            <Route
+              path="/patients"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <PatientsPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/patients/new"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <PatientFormPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/patients/history"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <PatientHistoryPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/patients/history/new"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <PatientHistoryPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/patients/:id"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <PatientDetailPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/patients/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <PatientFormPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
             
             <Route
               path="/users"
+              element={
+                <ProtectedRoute requiredRoles={[Role.ADMIN, Role.MODERATOR]}>
+                  <LayoutWrapper>
+                    <UserManagementPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/settings/users"
               element={
                 <ProtectedRoute requiredRoles={[Role.ADMIN, Role.MODERATOR]}>
                   <LayoutWrapper>
@@ -88,8 +169,8 @@ function App() {
                 <ProtectedRoute>
                   <LayoutWrapper>
                     <div className="space-y-6">
-                      <h1 className="text-3xl font-bold">Profile</h1>
-                      <p className="text-muted-foreground">Profile page coming soon...</p>
+                      <h1 className="text-3xl font-bold">Profil</h1>
+                      <p className="text-muted-foreground">Profilseite in Kürze verfügbar...</p>
                     </div>
                   </LayoutWrapper>
                 </ProtectedRoute>
@@ -107,43 +188,132 @@ function App() {
               }
             />
             
-            {/* Additional routes for demo */}
+            <Route
+              path="/settings/security"
+              element={
+                <ProtectedRoute requiredRoles={[Role.ADMIN]}>
+                  <LayoutWrapper>
+                    <SettingsPage user={{ id: '1', name: 'John Doe', email: 'john.doe@example.com', role: 'admin' }} />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/settings/services"
+              element={
+                <ProtectedRoute requiredRoles={[Role.ADMIN, Role.MODERATOR]}>
+                  <LayoutWrapper>
+                    <ServicesManagementPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/settings/rooms"
+              element={
+                <ProtectedRoute requiredRoles={[Role.ADMIN, Role.MODERATOR]}>
+                  <LayoutWrapper>
+                    <RoomsManagementPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Medical Center Routes - Placeholders */}
+            <Route
+              path="/calendar"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <div className="space-y-6">
+                      <h1 className="text-3xl font-bold">Terminkalender</h1>
+                      <p className="text-muted-foreground">Terminkalender in Kürze verfügbar...</p>
+                    </div>
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/appointments/*"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <div className="space-y-6">
+                      <h1 className="text-3xl font-bold">Termine</h1>
+                      <p className="text-muted-foreground">Terminverwaltung in Kürze verfügbar...</p>
+                    </div>
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/services/*"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <div className="space-y-6">
+                      <h1 className="text-3xl font-bold">Behandlungen</h1>
+                      <p className="text-muted-foreground">Behandlungsverwaltung in Kürze verfügbar...</p>
+                    </div>
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/staff/*"
+              element={
+                <ProtectedRoute requiredRoles={[Role.ADMIN, Role.MODERATOR]}>
+                  <LayoutWrapper>
+                    <div className="space-y-6">
+                      <h1 className="text-3xl font-bold">Personal</h1>
+                      <p className="text-muted-foreground">Personalverwaltung in Kürze verfügbar...</p>
+                    </div>
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/rooms"
+              element={
+                <ProtectedRoute requiredRoles={[Role.ADMIN, Role.MODERATOR]}>
+                  <LayoutWrapper>
+                    <div className="space-y-6">
+                      <h1 className="text-3xl font-bold">Behandlungsräume</h1>
+                      <p className="text-muted-foreground">Raumverwaltung in Kürze verfügbar...</p>
+                    </div>
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/payments"
+              element={
+                <ProtectedRoute requiredRoles={[Role.ADMIN, Role.MODERATOR]}>
+                  <LayoutWrapper>
+                    <div className="space-y-6">
+                      <h1 className="text-3xl font-bold">Abrechnung</h1>
+                      <p className="text-muted-foreground">Abrechnungsverwaltung in Kürze verfügbar...</p>
+                    </div>
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+            
             <Route
               path="/analytics"
               element={
                 <ProtectedRoute requiredRoles={[Role.ADMIN, Role.MODERATOR]}>
                   <LayoutWrapper>
                     <div className="space-y-6">
-                      <h1 className="text-3xl font-bold">Analytics</h1>
-                      <p className="text-muted-foreground">Analytics page coming soon...</p>
-                    </div>
-                  </LayoutWrapper>
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="/products"
-              element={
-                <ProtectedRoute>
-                  <LayoutWrapper>
-                    <div className="space-y-6">
-                      <h1 className="text-3xl font-bold">Products</h1>
-                      <p className="text-muted-foreground">Products page coming soon...</p>
-                    </div>
-                  </LayoutWrapper>
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="/orders"
-              element={
-                <ProtectedRoute>
-                  <LayoutWrapper>
-                    <div className="space-y-6">
-                      <h1 className="text-3xl font-bold">Orders</h1>
-                      <p className="text-muted-foreground">Orders page coming soon...</p>
+                      <h1 className="text-3xl font-bold">Berichte</h1>
+                      <p className="text-muted-foreground">Berichtssystem in Kürze verfügbar...</p>
                     </div>
                   </LayoutWrapper>
                 </ProtectedRoute>

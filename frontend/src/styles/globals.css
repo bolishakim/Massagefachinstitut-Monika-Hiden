@@ -191,3 +191,220 @@
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-foreground/60;
 }
+
+/* Fancy decorative app name styling with responsive design */
+.app-name {
+  font-family: 'Cinzel', 'Playfair Display', 'Georgia', 'Times New Roman', serif;
+  font-weight: 600;
+  font-size: clamp(0.6rem, 1.76vw, 0.96rem);
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-700)) 50%, hsl(var(--primary-500)) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 200%;
+  animation: subtle-glow 4s ease-in-out infinite;
+  font-style: normal;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+  font-variant: normal;
+}
+
+.dark .app-name {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 10px rgba(248, 250, 252, 0.1);
+  color: #f8fafc;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f8fafc 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Responsive breakpoints for app name */
+@media (max-width: 640px) {
+  .app-name {
+    font-size: clamp(0.52rem, 2.24vw, 0.72rem);
+    letter-spacing: 0.03em;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-name {
+    font-size: clamp(0.48rem, 2.56vw, 0.64rem);
+    letter-spacing: 0.02em;
+  }
+}
+
+/* Large screens */
+@media (min-width: 1024px) {
+  .app-name {
+    font-size: clamp(0.72rem, 1.04vw, 1.04rem);
+    letter-spacing: 0.05em;
+  }
+}
+
+/* Alternative fancy font option */
+.app-name-script {
+  font-family: 'Dancing Script', cursive;
+  font-weight: 600;
+  font-size: clamp(1rem, 2.8vw, 1.6rem);
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-600)) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-style: italic;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+}
+
+.dark .app-name-script {
+  color: #f8fafc;
+  background: none;
+  -webkit-text-fill-color: #f8fafc;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes subtle-glow {
+  0%, 100% {
+    background-position: 0% 50%;
+    filter: brightness(1);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: brightness(1.1);
+  }
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Responsive sidebar header */
+.sidebar-header {
+  min-height: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+@media (max-width: 768px) {
+  .sidebar-header {
+    padding: 0.75rem;
+    min-height: 3.5rem;
+  }
+}
+
+/* Ensure app name doesn't break layout */
+.app-name-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+@media (max-width: 480px) {
+  .app-name-container {
+    gap: 0.5rem;
+  }
+}
+
+/* Owner name styling */
+.app-owner-name {
+  font-family: 'Playfair Display', 'Georgia', 'Times New Roman', serif;
+  font-weight: 400;
+  font-size: clamp(0.48rem, 1.44vw, 0.68rem);
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+  text-transform: none;
+  margin-top: -0.1rem;
+  line-height: 1.1;
+  opacity: 0.9;
+}
+
+.dark .app-owner-name {
+  color: hsl(var(--muted-foreground));
+  opacity: 0.8;
+}
+
+/* Responsive adjustments for owner name */
+@media (max-width: 640px) {
+  .app-owner-name {
+    font-size: clamp(0.44rem, 1.6vw, 0.6rem);
+    letter-spacing: 0.03em;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-owner-name {
+    font-size: clamp(0.4rem, 1.76vw, 0.52rem);
+    letter-spacing: 0.02em;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-owner-name {
+    font-size: clamp(0.56rem, 0.96vw, 0.72rem);
+    letter-spacing: 0.06em;
+  }
+}
+
+/* Alternative compact styling for narrow sidebars */
+.app-name-compact {
+  font-family: 'Cinzel', 'Playfair Display', 'Georgia', 'Times New Roman', serif;
+  font-weight: 600;
+  font-size: clamp(0.65rem, 1.8vw, 1rem);
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-700)) 50%, hsl(var(--primary-500)) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 200%;
+  animation: subtle-glow 4s ease-in-out infinite;
+  font-style: normal;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+  font-variant: normal;
+}
+
+.dark .app-name-compact {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 10px rgba(248, 250, 252, 0.1);
+  color: #f8fafc;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f8fafc 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.app-owner-name-compact {
+  font-family: 'Playfair Display', 'Georgia', 'Times New Roman', serif;
+  font-weight: 400;
+  font-size: clamp(0.5rem, 1.5vw, 0.7rem);
+  letter-spacing: 0.03em;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+  text-transform: none;
+  margin-top: -0.1rem;
+  line-height: 1.1;
+  opacity: 0.9;
+}

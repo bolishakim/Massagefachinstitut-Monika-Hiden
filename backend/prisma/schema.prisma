@@ -38,6 +38,33 @@ model User {
   refreshToken String?
   lastLoginAt  DateTime?
   
+  // Staff specialization for center management
+  specialization StaffSpecialization?
+  
+  // Relationships
+  staffSchedules    StaffSchedule[]
+  staffLeaves       StaffLeave[]
+  appointments      Appointment[]
+  auditLogs         AuditLog[]
+  userSessions      UserSession[]
+  createdPackages   Package[]
+  createdPayments   Payment[]
+  notifications     Notification[]
+  
+  // Audit tracking relationships - Created records
+  patientsCreated         Patient[]        @relation("PatientCreatedBy")
+  appointmentsCreated     Appointment[]    @relation("AppointmentCreatedBy")
+  servicesCreated         Service[]        @relation("ServiceCreatedBy")
+  roomsCreated            Room[]           @relation("RoomCreatedBy")
+  patientHistoryCreated   PatientHistory[] @relation("PatientHistoryCreatedBy")
+  
+  // Audit tracking relationships - Modified records
+  patientsModified        Patient[]        @relation("PatientModifiedBy")
+  appointmentsModified    Appointment[]    @relation("AppointmentModifiedBy")
+  servicesModified        Service[]        @relation("ServiceModifiedBy")
+  roomsModified           Room[]           @relation("RoomModifiedBy")
+  patientHistoryModified  PatientHistory[] @relation("PatientHistoryModifiedBy")
+  
   @@map("users")
 }
 
@@ -45,4 +72,409 @@ enum Role {
   ADMIN
   MODERATOR
   USER
+}
+
+enum StaffSpecialization {
+  MASSAGE
+  PHYSIOTHERAPY
+  INFRARED_CHAIR
+  TRAINING
+  HEILMASSAGE // Austrian certified healing massage
+  MEDICAL_MASSAGE // Medical massage
+}
+
+model StaffSchedule {
+  id        String   @id @default(uuid())
+  staffId   String
+  dayOfWeek Int      // 0=Sunday, 1=Monday, etc.
+  startTime String   // Format: "09:00"
+  endTime   String   // Format: "17:00"
+  
+  // Break time support for Austrian labor requirements
+  breakStartTime String? // Format: "13:00"
+  breakEndTime   String? // Format: "15:00"
+  
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  staff User @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  
+  @@unique([staffId, dayOfWeek])
+  @@map("staff_schedules")
+}
+
+model StaffLeave {
+  id          String    @id @default(uuid())
+  staffId     String
+  startDate   DateTime
+  endDate     DateTime
+  reason      String?
+  isApproved  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  staff User @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  
+  @@map("staff_leaves")
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  features    String[] // Array of features like ["Massage Table", "Sound System", "AC"]
+  
+  // Audit fields
+  createdById String
+  modifiedById String?
+  
+  isActive    Boolean  @default(true)
+  capacity    Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  createdBy    User          @relation("RoomCreatedBy", fields: [createdById], references: [id])
+  modifiedBy   User?         @relation("RoomModifiedBy", fields: [modifiedById], references: [id])
+  appointments Appointment[]
+  
+  @@map("rooms")
+}
+
+model Service {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  nameGerman  String?  // German name for Austrian market
+  description String?
+  duration    Int      // Duration in minutes
+  price       Decimal  @db.Decimal(10,2)
+  category    ServiceCategory
+  categoryColor String @default("#3B82F6") // Hex color for calendar display
+  
+  // Special service properties
+  isForChildren Boolean @default(false) // For children/student pricing
+  isVoucher     Boolean @default(false) // If this is a voucher/package service
+  
+  // Audit fields
+  createdById   String
+  modifiedById  String?
+  
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  createdBy    User         @relation("ServiceCreatedBy", fields: [createdById], references: [id])
+  modifiedBy   User?        @relation("ServiceModifiedBy", fields: [modifiedById], references: [id])
+  packageItems PackageItem[]
+  appointments Appointment[]
+  
+  @@map("services")
+}
+
+enum ServiceCategory {
+  MASSAGE
+  PHYSIOTHERAPY
+  INFRARED_CHAIR
+  TRAINING
+  HEILMASSAGE // Austrian certified healing massage
+  COMBINATION // Combination services like SEN-RELAX + Massage
+  VOUCHER // Package vouchers like 10+1 free
+}
+
+model Patient {
+  id                    String   @id @default(uuid())
+  firstName             String
+  lastName              String
+  dateOfBirth           DateTime?
+  email                 String?  @unique
+  phone                 String   @unique
+  address               String?
+  socialInsuranceNumber String?  @unique // Austrian SVN
+  notes                 String?
+  
+  // Austrian-specific fields
+  doctorReferral        String?  // Doctor who referred patient
+  insuranceType         InsuranceType? // Public, private, self-pay
+  
+  // Audit fields
+  createdById           String
+  modifiedById          String?
+  
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relations
+  createdBy       User     @relation("PatientCreatedBy", fields: [createdById], references: [id])
+  modifiedBy      User?    @relation("PatientModifiedBy", fields: [modifiedById], references: [id])
+  packages        Package[]
+  appointments    Appointment[]
+  patientHistory  PatientHistory[]
+  payments        Payment[]
+  
+  @@map("patients")
+}
+
+enum InsuranceType {
+  PUBLIC_INSURANCE    // Gesetzliche Krankenversicherung
+  PRIVATE_INSURANCE   // Private Krankenversicherung
+  SELF_PAY           // Selbstzahler
+}
+
+model PatientHistory {
+  id              String   @id @default(uuid())
+  patientId       String
+  packageId       String?
+  appointmentId   String?
+  
+  // ANAMNESE (Medical History)
+  mainSubjectiveProblem          String?  // Subjektives Hauptproblem
+  symptomHistory                 String?  // Symptomanamnese (weis, wie, wo, 24h-Verhalten)
+  previousCourseAndTherapy       String?  // Bisheriger Verlauf und Therapie und bisherige Veränderungen durch diese
+  patientGoals                   String?  // Ziele(s) des Patienten
+  
+  // ALLGEMEINE INSPEKTION (General Inspection)
+  activityStatus                 String?  // Aktivitätszustand (liegend, sitzend, aktiv, welche Aktivitäten zeigt der Patient spontan ohne Aufforderung durch Therapeut, was fällt dabei auf?)
+  trunkAndHeadParticularities    String?  // Besonderheiten des Rumpfes und des Kopfes
+  edemaTrophicsAtrophies         String?  // Ödeme, Trophik, Atrophien
+  
+  // Additional notes
+  notes           String?
+  
+  // Audit fields
+  createdById     String
+  modifiedById    String?
+  
+  recordedAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  createdBy   User         @relation("PatientHistoryCreatedBy", fields: [createdById], references: [id])
+  modifiedBy  User?        @relation("PatientHistoryModifiedBy", fields: [modifiedById], references: [id])
+  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  package     Package?     @relation(fields: [packageId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+  
+  @@map("patient_history")
+}
+
+model Package {
+  id              String        @id @default(uuid())
+  patientId       String
+  name            String        // Custom package name
+  totalPrice      Decimal       @db.Decimal(10,2)
+  discountAmount  Decimal?      @db.Decimal(10,2)
+  finalPrice      Decimal       @db.Decimal(10,2)
+  status          PackageStatus @default(ACTIVE)
+  createdById     String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  patient        Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  createdBy      User            @relation(fields: [createdById], references: [id])
+  packageItems   PackageItem[]
+  appointments   Appointment[]
+  patientHistory PatientHistory[]
+  payments       Payment[]
+  
+  @@map("packages")
+}
+
+enum PackageStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model PackageItem {
+  id              String @id @default(uuid())
+  packageId       String
+  serviceId       String
+  sessionCount    Int    // Number of sessions for this service
+  completedCount  Int    @default(0) // How many sessions completed
+  
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id])
+  
+  @@unique([packageId, serviceId])
+  @@map("package_items")
+}
+
+model Appointment {
+  id                String            @id @default(uuid())
+  patientId         String
+  packageId         String?
+  serviceId         String
+  staffId           String
+  roomId            String
+  scheduledDate     DateTime
+  startTime         String            // Format: "14:00"
+  endTime           String            // Format: "14:45" (calculated from service duration)
+  status            AppointmentStatus @default(SCHEDULED)
+  notes             String?
+  
+  // Calendar and conflict detection fields
+  hasConflict       Boolean           @default(false)
+  conflictReason    String?           // Description of conflict if any
+  isVisible         Boolean           @default(true) // For calendar display control
+  
+  // Audit fields
+  createdById       String
+  modifiedById      String?
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  // Relations
+  createdBy      User             @relation("AppointmentCreatedBy", fields: [createdById], references: [id])
+  modifiedBy     User?            @relation("AppointmentModifiedBy", fields: [modifiedById], references: [id])
+  patient        Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  package        Package?         @relation(fields: [packageId], references: [id])
+  service        Service          @relation(fields: [serviceId], references: [id])
+  staff          User             @relation(fields: [staffId], references: [id])
+  room           Room             @relation(fields: [roomId], references: [id])
+  patientHistory PatientHistory[]
+  
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  patientId       String
+  packageId       String?
+  amount          Decimal       @db.Decimal(10,2)
+  paymentMethod   PaymentMethod
+  paidSessionsCount Int?        // How many sessions this payment covers
+  status          PaymentStatus @default(PENDING)
+  paidAt          DateTime?
+  notes           String?
+  createdById     String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  package   Package? @relation(fields: [packageId], references: [id])
+  createdBy User    @relation(fields: [createdById], references: [id])
+  
+  @@map("payments")
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  REFUNDED
+}
+
+model AuditLog {
+  id          String     @id @default(uuid())
+  userId      String
+  action      AuditAction
+  tableName   String     // Which table was affected
+  recordId    String     // ID of the affected record
+  oldValues   Json?      // Previous values (for updates)
+  newValues   Json?      // New values (for inserts/updates)
+  description String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime   @default(now())
+  
+  user User @relation(fields: [userId], references: [id])
+  
+  @@map("audit_logs")
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+}
+
+model UserSession {
+  id          String    @id @default(uuid())
+  userId      String
+  sessionToken String   @unique
+  ipAddress   String?
+  userAgent   String?
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_sessions")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  isPublic    Boolean  @default(false) // Whether setting can be accessed by non-admin users
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("system_settings")
+}
+
+model Notification {
+  id          String             @id @default(uuid())
+  userId      String?            // If null, it's a system-wide notification
+  type        NotificationType
+  title       String
+  message     String
+  isRead      Boolean            @default(false)
+  scheduledFor DateTime?         // For scheduled notifications like appointment reminders
+  sentAt      DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  
+  user User? @relation(fields: [userId], references: [id])
+  
+  @@map("notifications")
+}
+
+model CalendarSetting {
+  id                    String   @id @default(uuid())
+  userId                String?  // If null, applies to all users
+  workingHoursStart     String   @default("08:00") // Calendar start time
+  workingHoursEnd       String   @default("20:00") // Calendar end time
+  timeSlotInterval      Int      @default(30) // Minutes between time slots for display
+  showWeekends          Boolean  @default(false)
+  defaultView           String   @default("day") // day, week, month
+  showStaffAvailability Boolean  @default(true) // Show staff schedule blocks
+  showRoomInfo          Boolean  @default(true)
+  autoRefreshInterval   Int      @default(300) // Seconds
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@unique([userId])
+  @@map("calendar_settings")
+}
+
+enum NotificationType {
+  APPOINTMENT_REMINDER
+  PAYMENT_DUE
+  STAFF_LEAVE_REQUEST
+  PACKAGE_EXPIRING
+  SYSTEM_ALERT
+  APPOINTMENT_CONFLICT
 }

@@ -11,11 +11,15 @@ import {
   Settings, 
   LogOut, 
   ChevronDown,
-  Plus
+  Plus,
+  UserPlus,
+  FileText,
+  Clock
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import { FileTextPlus } from '../ui/FileTextPlus';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -35,6 +39,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
 
   const { theme, setTheme, isDark } = useTheme();
@@ -43,6 +48,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const themeMenuRef = useRef<HTMLDivElement>(null);
+  const newMenuRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -55,6 +61,9 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
       }
       if (themeMenuRef.current && !themeMenuRef.current.contains(event.target as Node)) {
         setThemeMenuOpen(false);
+      }
+      if (newMenuRef.current && !newMenuRef.current.contains(event.target as Node)) {
+        setNewMenuOpen(false);
       }
     };
 
@@ -69,6 +78,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
         setUserMenuOpen(false);
         setNotificationsOpen(false);
         setThemeMenuOpen(false);
+        setNewMenuOpen(false);
       }
     };
 
@@ -90,9 +100,9 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
   };
 
   const mockNotifications = [
-    { id: '1', title: 'New user registered', message: 'John Doe has joined the platform', time: '2 min ago', unread: true },
-    { id: '2', title: 'Order completed', message: 'Order #12345 has been processed', time: '1 hour ago', unread: true },
-    { id: '3', title: 'System update', message: 'Maintenance scheduled for tonight', time: '3 hours ago', unread: false },
+    { id: '1', title: 'Neuer Benutzer registriert', message: 'John Doe ist der Plattform beigetreten', time: 'vor 2 Min', unread: true },
+    { id: '2', title: 'Bestellung abgeschlossen', message: 'Bestellung #12345 wurde verarbeitet', time: 'vor 1 Std', unread: true },
+    { id: '3', title: 'System-Update', message: 'Wartung für heute Abend geplant', time: 'vor 3 Std', unread: false },
   ];
 
   const unreadCount = mockNotifications.filter(n => n.unread).length;
@@ -111,7 +121,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
   };
 
   return (
-    <header className="bg-background border-b border-border sticky top-0 z-30">
+    <header className="bg-background border-b border-border sticky top-0 z-30 shadow-xl">
       <div className="flex items-center justify-between px-4 py-3 md:px-6">
         {/* Left Section */}
         <div className="flex items-center space-x-4">
@@ -121,7 +131,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
               size="sm"
               onClick={onMenuClick}
               className="p-2 md:hidden"
-              aria-label="Open menu"
+              aria-label="Menü öffnen"
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -136,7 +146,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search anything..."
+                placeholder="Alles durchsuchen..."
                 className="w-full pl-10 pr-4 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
@@ -147,11 +157,69 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
 
         {/* Right Section */}
         <div className="flex items-center space-x-2 md:space-x-4">
-          {/* Quick Actions */}
-          <Button variant="outline" size="sm" className="hidden lg:flex">
-            <Plus className="h-4 w-4 mr-2" />
-            New
-          </Button>
+          {/* Quick Actions - New Menu */}
+          <div className="relative hidden lg:block" ref={newMenuRef}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setNewMenuOpen(!newMenuOpen)}
+              className="flex items-center space-x-2"
+              aria-label="Neu erstellen"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Neu</span>
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+
+            <AnimatePresence>
+              {newMenuOpen && (
+                <motion.div
+                  variants={dropdownVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  className="absolute right-0 top-full mt-2 w-56 bg-popover border rounded-md shadow-elegant z-50"
+                >
+                  <div className="py-2">
+                    <a
+                      href="/patients/new"
+                      className="flex items-center px-4 py-3 text-sm hover:bg-accent transition-colors"
+                      onClick={() => setNewMenuOpen(false)}
+                    >
+                      <UserPlus className="h-4 w-4 mr-3 text-primary" />
+                      <div>
+                        <p className="font-medium">Neuer Patient</p>
+                        <p className="text-xs text-muted-foreground">Patientendaten erfassen</p>
+                      </div>
+                    </a>
+                    <a
+                      href="/patients/history/new"
+                      className="flex items-center px-4 py-3 text-sm hover:bg-accent transition-colors"
+                      onClick={() => setNewMenuOpen(false)}
+                    >
+                      <FileTextPlus className="h-4 w-4 mr-3" />
+                      <div>
+                        <p className="font-medium">Neue Krankengeschichte</p>
+                        <p className="text-xs text-muted-foreground">Medizinische Dokumentation erstellen</p>
+                      </div>
+                    </a>
+                    <a
+                      href="/appointments/new"
+                      className="flex items-center px-4 py-3 text-sm hover:bg-accent transition-colors"
+                      onClick={() => setNewMenuOpen(false)}
+                    >
+                      <Clock className="h-4 w-4 mr-3 text-primary" />
+                      <div>
+                        <p className="font-medium">Neuer Termin</p>
+                        <p className="text-xs text-muted-foreground">Behandlungstermin vereinbaren</p>
+                      </div>
+                    </a>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Theme Toggle */}
           <div className="relative" ref={themeMenuRef}>
@@ -160,7 +228,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
               size="sm"
               onClick={() => setThemeMenuOpen(!themeMenuOpen)}
               className="p-2"
-              aria-label="Theme settings"
+              aria-label="Design-Einstellungen"
             >
               {React.createElement(getThemeIcon(), { className: "h-4 w-4" })}
             </Button>
@@ -187,7 +255,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
                       )}
                     >
                       <Sun className="h-4 w-4 mr-3" />
-                      Light
+                      Hell
                     </button>
                     <button
                       onClick={() => {
@@ -200,7 +268,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
                       )}
                     >
                       <Moon className="h-4 w-4 mr-3" />
-                      Dark
+                      Dunkel
                     </button>
                     <button
                       onClick={() => {
@@ -228,7 +296,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
               size="sm"
               onClick={() => setNotificationsOpen(!notificationsOpen)}
               className="p-2 relative"
-              aria-label="Notifications"
+              aria-label="Benachrichtigungen"
             >
               <Bell className="h-4 w-4" />
               {unreadCount > 0 && (
@@ -252,7 +320,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
                   className="absolute right-0 top-full mt-2 w-80 bg-popover border rounded-md shadow-elegant z-50"
                 >
                   <div className="p-4 border-b border-border">
-                    <h3 className="font-semibold">Notifications</h3>
+                    <h3 className="font-semibold">Benachrichtigungen</h3>
                   </div>
                   <div className="max-h-80 overflow-y-auto">
                     {mockNotifications.map((notification) => (
@@ -278,7 +346,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
                   </div>
                   <div className="p-4 border-t border-border">
                     <Button variant="outline" size="sm" className="w-full">
-                      View all notifications
+                      Alle Benachrichtigungen anzeigen
                     </Button>
                   </div>
                 </motion.div>
@@ -294,7 +362,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
                 size="sm"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center space-x-2 px-3 py-2 h-auto"
-                aria-label="User menu"
+                aria-label="Benutzermenü"
               >
                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                   {user.avatar ? (
@@ -335,14 +403,14 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
                         className="flex items-center px-4 py-2 text-sm hover:bg-accent transition-colors"
                       >
                         <User className="h-4 w-4 mr-3" />
-                        Profile
+                        Profil
                       </a>
                       <a
                         href="/settings"
                         className="flex items-center px-4 py-2 text-sm hover:bg-accent transition-colors"
                       >
                         <Settings className="h-4 w-4 mr-3" />
-                        Settings
+                        Einstellungen
                       </a>
                     </div>
                     <div className="border-t border-border py-2">
@@ -354,7 +422,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
                         }}
                       >
                         <LogOut className="h-4 w-4 mr-3" />
-                        Sign out
+                        Abmelden
                       </button>
                     </div>
                   </motion.div>
@@ -368,7 +436,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
             variant="ghost"
             size="sm"
             className="p-2 md:hidden"
-            aria-label="Search"
+            aria-label="Suchen"
           >
             <Search className="h-4 w-4" />
           </Button>

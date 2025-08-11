@@ -27,13 +27,13 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
     const newErrors: Partial<LoginFormType> = {};
 
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = 'E-Mail ist erforderlich';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = 'Bitte geben Sie eine gültige E-Mail-Adresse ein';
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = 'Passwort ist erforderlich';
     }
 
     setErrors(newErrors);
@@ -51,7 +51,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
     if (result.success) {
       onSuccess?.();
     } else {
-      setSubmitError(result.error || 'Login failed. Please try again.');
+      setSubmitError(result.error || 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
     }
   };
 
@@ -73,9 +73,9 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
   return (
     <Card className="w-full max-w-md glass">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-center">Welcome back</CardTitle>
+        <CardTitle className="text-center">Willkommen zurück</CardTitle>
         <CardDescription className="text-center">
-          Sign in to your account to continue
+          Melden Sie sich bei Ihrem Konto an, um fortzufahren
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -83,10 +83,10 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
           <div className="relative">
             <Mail className="absolute left-3 top-10 h-4 w-4 text-muted-foreground" />
             <Input
-              label="Email"
+              label="E-Mail"
               name="email"
               type="email"
-              placeholder="Enter your email"
+              placeholder="Geben Sie Ihre E-Mail-Adresse ein"
               value={formData.email}
               onChange={handleChange}
               error={errors.email}
@@ -98,10 +98,10 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
           <div className="relative">
             <Lock className="absolute left-3 top-10 h-4 w-4 text-muted-foreground" />
             <Input
-              label="Password"
+              label="Passwort"
               name="password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="Enter your password"
+              placeholder="Geben Sie Ihr Passwort ein"
               value={formData.password}
               onChange={handleChange}
               error={errors.password}
@@ -133,7 +133,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
             loading={loading}
             disabled={loading}
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Anmelden...' : 'Anmelden'}
             {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
 
@@ -144,18 +144,18 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
                 onClick={onForgotPassword}
                 className="text-sm text-primary hover:underline"
               >
-                Forgot your password?
+                Passwort vergessen?
               </button>
             </div>
 
             <div className="text-center text-sm text-muted-foreground">
-              Don't have an account?{' '}
+              Noch kein Konto?{' '}
               <button
                 type="button"
                 onClick={onSwitchToRegister}
                 className="text-primary hover:underline font-medium"
               >
-                Sign up
+                Registrieren
               </button>
             </div>
           </div>

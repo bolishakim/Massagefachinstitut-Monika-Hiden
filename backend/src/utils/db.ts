@@ -36,10 +36,33 @@ export const prisma =
   globalThis.__prisma ||
   new PrismaClient({
     log: getPrismaLogLevel(),
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
   });
 
 if (process.env.NODE_ENV !== 'production') {
   globalThis.__prisma = prisma;
 }
+
+// Handle graceful shutdown
+process.on('beforeExit', async () => {
+  console.log('🔄 Disconnecting from database...');
+  await prisma.$disconnect();
+});
+
+process.on('SIGINT', async () => {
+  console.log('🔄 Received SIGINT, disconnecting from database...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('🔄 Received SIGTERM, disconnecting from database...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
 
 export default prisma;

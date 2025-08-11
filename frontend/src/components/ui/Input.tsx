@@ -1,21 +1,42 @@
 import React from 'react';
 import { clsx } from 'clsx';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface BaseInputProps {
   label?: string;
   error?: string;
   helperText?: string;
+  multiline?: boolean;
+  rows?: number;
 }
+
+type InputProps = BaseInputProps & (
+  | (React.InputHTMLAttributes<HTMLInputElement> & { multiline?: false })
+  | (React.TextareaHTMLAttributes<HTMLTextAreaElement> & { multiline: true })
+);
 
 export function Input({
   label,
   error,
   helperText,
+  multiline = false,
+  rows = 3,
   className,
   id,
   ...props
 }: InputProps) {
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+
+  const baseClassName = clsx(
+    'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
+    'file:border-0 file:bg-transparent file:text-sm file:font-medium',
+    'placeholder:text-muted-foreground',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+    'disabled:cursor-not-allowed disabled:opacity-50',
+    error && 'border-destructive focus-visible:ring-destructive',
+    !multiline && 'h-10',
+    multiline && 'min-h-[80px] resize-vertical',
+    className
+  );
 
   return (
     <div className="space-y-2">
@@ -27,19 +48,20 @@ export function Input({
           {label}
         </label>
       )}
-      <input
-        id={inputId}
-        className={clsx(
-          'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
-          'file:border-0 file:bg-transparent file:text-sm file:font-medium',
-          'placeholder:text-muted-foreground',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-          'disabled:cursor-not-allowed disabled:opacity-50',
-          error && 'border-destructive focus-visible:ring-destructive',
-          className
-        )}
-        {...props}
-      />
+      {multiline ? (
+        <textarea
+          id={inputId}
+          rows={rows}
+          className={baseClassName}
+          {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
+        />
+      ) : (
+        <input
+          id={inputId}
+          className={baseClassName}
+          {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
+        />
+      )}
       {error && (
         <p className="text-sm text-destructive">{error}</p>
       )}

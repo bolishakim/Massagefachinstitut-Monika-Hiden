@@ -8,9 +8,9 @@ export function AssistantPage() {
       {/* Page Header - Hidden on mobile to maximize chat space */}
       <div className="hidden md:block px-6 py-4 border-b border-border bg-background/80 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto">
-          <H2>AI Assistant</H2>
+          <H2>KI-Assistent</H2>
           <TextMD className="text-muted-foreground mt-1">
-            Chat with AI using text, voice, images, and documents. Your conversations are powered by advanced AI through n8n workflows.
+            Chatten Sie mit der KI über Text, Sprache, Bilder und Dokumente. Ihre Gespräche werden von fortschrittlicher KI über n8n-Workflows betrieben.
           </TextMD>
         </div>
       </div>

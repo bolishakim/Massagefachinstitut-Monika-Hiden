@@ -21,7 +21,7 @@ export function MessageInput({
   onSendMessage, 
   onSendVoice,
   disabled = false,
-  placeholder = "Type your message...",
+  placeholder = "Nachricht eingeben...",
   className 
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
@@ -99,7 +99,7 @@ export function MessageInput({
                 className="bg-muted/50 rounded-lg p-4"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium">Voice Message</h3>
+                  <h3 className="text-sm font-medium">Sprachnachricht</h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -123,7 +123,7 @@ export function MessageInput({
                 className="bg-muted/50 rounded-lg p-4"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium">File Upload</h3>
+                  <h3 className="text-sm font-medium">Datei hochladen</h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -142,7 +142,7 @@ export function MessageInput({
                         type="text"
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Add a caption (optional)..."
+                        placeholder="Beschriftung hinzufügen (optional)..."
                         className="flex-1 px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                         disabled={disabled}
                       />
@@ -180,7 +180,7 @@ export function MessageInput({
                 className="text-xs"
               >
                 <Mic className="h-3 w-3 mr-1" />
-                Voice
+                Sprache
               </Button>
               <Button
                 variant={mode === 'file' ? 'default' : 'ghost'}
@@ -190,7 +190,7 @@ export function MessageInput({
                 className="text-xs"
               >
                 <Paperclip className="h-3 w-3 mr-1" />
-                Files
+                Dateien
               </Button>
             </div>
           </div>
@@ -236,7 +236,7 @@ export function MessageInput({
                       onClick={() => setMode('file')}
                       disabled={disabled}
                       className="p-1.5 h-auto"
-                      aria-label="Add files"
+                      aria-label="Dateien hinzufügen"
                     >
                       <Paperclip className="h-4 w-4" />
                     </Button>
@@ -247,7 +247,7 @@ export function MessageInput({
                   onClick={handleSend}
                   disabled={!canSend || disabled}
                   className="h-11 px-4"
-                  aria-label="Send message"
+                  aria-label="Nachricht senden"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
@@ -258,7 +258,7 @@ export function MessageInput({
 
         {/* Quick Tips */}
         <div className="mt-2 text-xs text-muted-foreground text-center">
-          Press Shift+Enter for new line • Drag & drop files anywhere
+          Umschalt+Enter für neue Zeile • Dateien per Drag & Drop überall ablegen
         </div>
       </div>
     </div>

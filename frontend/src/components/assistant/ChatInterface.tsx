@@ -97,9 +97,9 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
       <div className={clsx('flex items-center justify-center h-full', className)}>
         <div className="text-center max-w-md p-6">
           <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Configuration Required</h3>
+          <h3 className="text-lg font-semibold mb-2">Konfiguration erforderlich</h3>
           <p className="text-muted-foreground mb-4">
-            AI Assistant requires n8n webhook configuration. Please set the VITE_N8N_WEBHOOK_URL environment variable.
+            KI-Assistent benötigt n8n-Webhook-Konfiguration. Bitte setzen Sie die VITE_N8N_WEBHOOK_URL Umgebungsvariable.
           </p>
           <div className="text-xs text-muted-foreground bg-muted p-3 rounded-md text-left">
             <code>VITE_N8N_WEBHOOK_URL=https://your-n8n-instance.com/webhook/assistant</code>
@@ -118,9 +118,9 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
             <Bot className="h-4 w-4 text-primary-foreground" />
           </div>
           <div>
-            <h2 className="font-semibold">AI Assistant</h2>
+            <h2 className="font-semibold">KI-Assistent</h2>
             <p className="text-xs text-muted-foreground">
-              Session: {sessionId.split('_').pop()}
+              Sitzung: {sessionId.split('_').pop()}
             </p>
           </div>
         </div>
@@ -134,7 +134,7 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
               className="flex items-center gap-2"
             >
               <Trash2 className="h-4 w-4" />
-              Clear Chat
+              Chat leeren
             </Button>
           )}
         </div>
@@ -205,7 +205,7 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
                   className="text-destructive hover:text-destructive"
                 >
                   <RefreshCw className="h-4 w-4 mr-1" />
-                  Retry
+                  Wiederholen
                 </Button>
                 <Button
                   variant="ghost"
@@ -229,12 +229,12 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
           disabled={isLoading}
           placeholder={
             settings.fileUploadEnabled && settings.voiceEnabled
-              ? "Type a message, upload files, or record voice..."
+              ? "Nachricht eingeben, Dateien hochladen oder Sprache aufnehmen..."
               : settings.fileUploadEnabled
-              ? "Type a message or upload files..."
+              ? "Nachricht eingeben oder Dateien hochladen..."
               : settings.voiceEnabled
-              ? "Type a message or record voice..."
-              : "Type a message..."
+              ? "Nachricht eingeben oder Sprache aufnehmen..."
+              : "Nachricht eingeben..."
           }
         />
       </div>

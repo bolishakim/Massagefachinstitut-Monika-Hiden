@@ -9,6 +9,7 @@ class ApiService {
     this.api = axios.create({
       baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3050/api',
       withCredentials: true,
+      timeout: 30000, // 30 second timeout
       headers: {
         'Content-Type': 'application/json',
       },
@@ -36,6 +37,15 @@ class ApiService {
       async (error) => {
         const originalRequest = error.config;
 
+        // Handle network errors
+        if (error.code === 'ECONNABORTED' || error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT') {
+          console.error('Network connectivity issue:', error.message);
+          throw {
+            success: false,
+            error: 'Network connection failed. Please check your internet connection and try again.',
+          };
+        }
+
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
@@ -57,6 +67,7 @@ class ApiService {
           } catch (refreshError) {
             this.refreshTokenPromise = null;
             localStorage.removeItem('accessToken');
+            console.error('Token refresh failed:', refreshError);
             window.location.href = '/login';
             return Promise.reject(refreshError);
           }

@@ -75,12 +75,12 @@ export function FileUploader({ onFilesChange, disabled, className }: FileUploade
           {isProcessing ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Processing...
+              Verarbeitung...
             </>
           ) : (
             <>
               <Paperclip className="h-4 w-4" />
-              Add Files
+              Dateien hinzufügen
             </>
           )}
         </Button>
@@ -93,7 +93,7 @@ export function FileUploader({ onFilesChange, disabled, className }: FileUploade
             disabled={disabled}
             className="text-muted-foreground hover:text-foreground"
           >
-            Clear All
+            Alle löschen
           </Button>
         )}
       </div>
@@ -123,7 +123,7 @@ export function FileUploader({ onFilesChange, disabled, className }: FileUploade
               <div className="text-center">
                 <Upload className="h-8 w-8 mx-auto mb-2 text-primary" />
                 <p className="text-sm font-medium text-primary">
-                  Drop files here to upload
+                  Dateien hier ablegen zum Hochladen
                 </p>
               </div>
             </motion.div>
@@ -134,17 +134,17 @@ export function FileUploader({ onFilesChange, disabled, className }: FileUploade
           <Upload className="h-6 w-6 text-muted-foreground" />
           <div>
             <p className="text-sm text-muted-foreground">
-              Drop files here or{' '}
+              Dateien hier ablegen oder{' '}
               <button
                 onClick={openFileDialog}
                 className="text-primary hover:underline"
                 disabled={disabled}
               >
-                browse
+                durchsuchen
               </button>
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Supports: Images, PDFs, Text files, Audio (Max 10MB)
+              Unterstützt: Bilder, PDFs, Textdateien, Audio (Max. 10MB)
             </p>
           </div>
         </div>

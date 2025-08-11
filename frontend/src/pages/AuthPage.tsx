@@ -28,14 +28,14 @@ export function AuthPage() {
   const handleRegisterSuccess = (emailVerificationToken?: string) => {
     if (emailVerificationToken) {
       setSuccessMessage(
-        'Account created successfully! Please check your email to verify your account.'
+        'Konto erfolgreich erstellt! Bitte überprüfen Sie Ihre E-Mails, um Ihr Konto zu verifizieren.'
       );
     }
   };
 
   const handleForgotPasswordSuccess = () => {
     setSuccessMessage(
-      'Password reset instructions have been sent to your email.'
+      'Anweisungen zum Zurücksetzen des Passworts wurden an Ihre E-Mail-Adresse gesendet.'
     );
     setMode('login');
   };
@@ -123,14 +123,15 @@ export function AuthPage() {
           className="text-center text-xs text-muted-foreground"
         >
           <p>
-            By continuing, you agree to our{' '}
+            Durch Fortfahren stimmen Sie unseren{' '}
             <a href="#" className="text-primary hover:underline">
-              Terms of Service
+              Allgemeinen Geschäftsbedingungen
             </a>{' '}
-            and{' '}
+            und der{' '}
             <a href="#" className="text-primary hover:underline">
-              Privacy Policy
-            </a>
+              Datenschutzerklärung
+            </a>{' '}
+            zu
           </p>
         </motion.div>
       </motion.div>

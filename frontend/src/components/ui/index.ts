@@ -17,6 +17,7 @@ export * from './Card';
 export * from './Badge';
 export * from './Avatar';
 export * from './Alert';
+export * from './ConfirmDialog';
 export * from './SkipLink';
 
 // Re-export commonly used types

@@ -112,7 +112,7 @@ export function VoiceRecorder({ onSend, disabled, className }: VoiceRecorderProp
             className="flex items-center gap-2"
           >
             <Mic className="h-4 w-4" />
-            Start Recording
+            Aufnahme starten
           </Button>
         )}
 
@@ -202,23 +202,46 @@ export function VoiceRecorder({ onSend, disabled, className }: VoiceRecorderProp
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex items-center justify-center p-4 bg-muted rounded-lg"
+            className="p-4 bg-muted/50 rounded-lg"
           >
-            <div className="flex items-center gap-1">
-              {Array.from({ length: 5 }).map((_, i) => (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                    className="w-2 h-2 bg-destructive rounded-full"
+                  />
+                  Aufnahme läuft...
+                </span>
+                <span className="font-mono text-xs">{formatDuration(duration)}</span>
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="relative w-full h-2 bg-background rounded-full overflow-hidden">
                 <motion.div
-                  key={i}
-                  className="w-1 bg-destructive rounded-full"
-                  animate={{
-                    height: [10, 20, 10],
+                  className="h-full bg-gradient-to-r from-destructive to-destructive/80 rounded-full"
+                  initial={{ width: '0%' }}
+                  animate={{ 
+                    width: `${Math.min((duration / 120) * 100, 100)}%` // Max 2 minutes
                   }}
-                  transition={{
-                    duration: 0.5,
+                  transition={{ duration: 0.3 }}
+                />
+                {/* Animated pulse overlay */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  animate={{ x: ['-100%', '100%'] }}
+                  transition={{ 
+                    duration: 2, 
                     repeat: Infinity,
-                    delay: i * 0.1,
+                    ease: 'easeInOut'
                   }}
                 />
-              ))}
+              </div>
+              
+              <div className="text-xs text-muted-foreground text-center">
+                Max. 2 Minuten Aufnahmezeit
+              </div>
             </div>
           </motion.div>
         )}

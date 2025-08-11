@@ -258,16 +258,16 @@ export function UserManagementPage() {
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <Users className="h-8 w-8" />
-              User Management
+              Benutzerverwaltung
             </h1>
             <p className="text-muted-foreground">
-              Manage user accounts and permissions
+              Benutzerkonten und Berechtigungen verwalten
             </p>
           </div>
           {isAdmin() && (
             <Button onClick={openCreateModal}>
               <Plus className="h-4 w-4 mr-2" />
-              Add User
+              Benutzer hinzufügen
             </Button>
           )}
         </div>
@@ -279,7 +279,7 @@ export function UserManagementPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search users by name or email..."
+                  placeholder="Benutzer nach Name oder E-Mail suchen..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -287,13 +287,13 @@ export function UserManagementPage() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm">
-                  All Users ({users.length})
+                  Alle Benutzer ({users.length})
                 </Button>
                 <Button variant="outline" size="sm">
-                  Active ({users.filter((u) => u.isActive).length})
+                  Aktiv ({users.filter((u) => u.isActive).length})
                 </Button>
                 <Button variant="outline" size="sm">
-                  Inactive ({users.filter((u) => !u.isActive).length})
+                  Inaktiv ({users.filter((u) => !u.isActive).length})
                 </Button>
               </div>
             </div>
@@ -313,7 +313,7 @@ export function UserManagementPage() {
                   onClick={() => setError(null)}
                   className="ml-auto"
                 >
-                  Dismiss
+                  Schließen
                 </Button>
               </div>
             </CardContent>
@@ -324,8 +324,8 @@ export function UserManagementPage() {
         <Card className="glass">
           <CardHeader>
             <CardTitle>
-              Users ({pagination.totalCount})
-              {loading && <span className="text-muted-foreground text-sm ml-2">Loading...</span>}
+              Benutzer ({pagination.totalCount})
+              {loading && <span className="text-muted-foreground text-sm ml-2">Laden...</span>}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -333,12 +333,12 @@ export function UserManagementPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">User</th>
-                    <th className="text-left py-3 px-4 font-medium">Role</th>
+                    <th className="text-left py-3 px-4 font-medium">Benutzer</th>
+                    <th className="text-left py-3 px-4 font-medium">Rolle</th>
                     <th className="text-left py-3 px-4 font-medium">Status</th>
-                    <th className="text-left py-3 px-4 font-medium">Verified</th>
-                    <th className="text-left py-3 px-4 font-medium">Created</th>
-                    <th className="text-right py-3 px-4 font-medium">Actions</th>
+                    <th className="text-left py-3 px-4 font-medium">Verifiziert</th>
+                    <th className="text-left py-3 px-4 font-medium">Erstellt</th>
+                    <th className="text-right py-3 px-4 font-medium">Aktionen</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -391,7 +391,7 @@ export function UserManagementPage() {
                           ) : (
                             <UserX className="h-3 w-3" />
                           )}
-                          {user.isActive ? 'Active' : 'Inactive'}
+                          {user.isActive ? 'Aktiv' : 'Inaktiv'}
                         </span>
                       </td>
                       <td className="py-4 px-4">
@@ -403,7 +403,7 @@ export function UserManagementPage() {
                           }`}
                         >
                           <Mail className="h-3 w-3" />
-                          {user.emailVerified ? 'Verified' : 'Pending'}
+                          {user.emailVerified ? 'Verifiziert' : 'Ausstehend'}
                         </span>
                       </td>
                       <td className="py-4 px-4 text-sm text-muted-foreground">
@@ -420,7 +420,7 @@ export function UserManagementPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => openEditModal(user)}
-                                title="Edit user"
+                                title="Benutzer bearbeiten"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -428,7 +428,7 @@ export function UserManagementPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => openStatusModal(user)}
-                                title={user.isActive ? 'Deactivate user' : 'Activate user'}
+                                title={user.isActive ? 'Benutzer deaktivieren' : 'Benutzer aktivieren'}
                               >
                                 {user.isActive ? (
                                   <UserX className="h-4 w-4" />
@@ -441,7 +441,7 @@ export function UserManagementPage() {
                                 size="sm"
                                 onClick={() => openDeleteModal(user)}
                                 className="text-destructive hover:text-destructive"
-                                title="Delete user"
+                                title="Benutzer löschen"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -461,14 +461,14 @@ export function UserManagementPage() {
             {!loading && users.length === 0 && (
               <div className="text-center py-12">
                 <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium">No users found</h3>
+                <h3 className="text-lg font-medium">Keine Benutzer gefunden</h3>
                 <p className="text-muted-foreground">
-                  {searchTerm ? 'Try adjusting your search terms' : 'No users available'}
+                  {searchTerm ? 'Versuchen Sie, Ihre Suchbegriffe anzupassen' : 'Keine Benutzer verfügbar'}
                 </p>
                 {isAdmin() && !searchTerm && (
                   <Button onClick={openCreateModal} className="mt-4">
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Your First User
+                    Ersten Benutzer erstellen
                   </Button>
                 )}
               </div>
@@ -481,7 +481,7 @@ export function UserManagementPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">
-                  Showing {((pagination.currentPage - 1) * 10) + 1} to {Math.min(pagination.currentPage * 10, pagination.totalCount)} of {pagination.totalCount} users
+                  Zeige {((pagination.currentPage - 1) * 10) + 1} bis {Math.min(pagination.currentPage * 10, pagination.totalCount)} von {pagination.totalCount} Benutzern
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
@@ -490,10 +490,10 @@ export function UserManagementPage() {
                     onClick={() => loadUsers(pagination.currentPage - 1)}
                     disabled={!pagination.hasPreviousPage || loading}
                   >
-                    Previous
+                    Zurück
                   </Button>
                   <span className="text-sm text-muted-foreground">
-                    Page {pagination.currentPage} of {pagination.totalPages}
+                    Seite {pagination.currentPage} von {pagination.totalPages}
                   </span>
                   <Button
                     variant="outline"
@@ -501,7 +501,7 @@ export function UserManagementPage() {
                     onClick={() => loadUsers(pagination.currentPage + 1)}
                     disabled={!pagination.hasNextPage || loading}
                   >
-                    Next
+                    Weiter
                   </Button>
                 </div>
               </div>

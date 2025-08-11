@@ -12,28 +12,28 @@ export function DashboardPage() {
   const { user } = useAuth();
   const stats = [
     {
-      title: 'Total Users',
+      title: 'Gesamte Benutzer',
       value: '12,345',
       change: '+12%',
       trend: 'up',
       icon: Users,
     },
     {
-      title: 'Products',
+      title: 'Produkte',
       value: '1,234',
       change: '+5%',
       trend: 'up',
       icon: Package,
     },
     {
-      title: 'Revenue',
-      value: '$45,678',
+      title: 'Umsatz',
+      value: '€45,678',
       change: '+18%',
       trend: 'up',
       icon: TrendingUp,
     },
     {
-      title: 'Analytics',
+      title: 'Statistiken',
       value: '98.5%',
       change: '-2%',
       trend: 'down',
@@ -42,19 +42,19 @@ export function DashboardPage() {
   ];
 
   const recentActivity = [
-    { id: 1, user: 'John Doe', action: 'Created new product', time: '2 minutes ago' },
-    { id: 2, user: 'Jane Smith', action: 'Updated user profile', time: '5 minutes ago' },
-    { id: 3, user: 'Mike Johnson', action: 'Completed order #12345', time: '10 minutes ago' },
-    { id: 4, user: 'Sarah Wilson', action: 'Added new category', time: '15 minutes ago' },
+    { id: 1, user: 'John Doe', action: 'Neues Produkt erstellt', time: 'vor 2 Minuten' },
+    { id: 2, user: 'Jane Smith', action: 'Benutzerprofil aktualisiert', time: 'vor 5 Minuten' },
+    { id: 3, user: 'Mike Johnson', action: 'Bestellung #12345 abgeschlossen', time: 'vor 10 Minuten' },
+    { id: 4, user: 'Sarah Wilson', action: 'Neue Kategorie hinzugefügt', time: 'vor 15 Minuten' },
   ];
 
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
       <div>
-        <H1>Welcome back, {user ? `${user.firstName} ${user.lastName}` : 'User'}!</H1>
+        <H1>Willkommen zurück, {user ? `${user.firstName} ${user.lastName}` : 'Benutzer'}!</H1>
         <TextMD className="text-muted-foreground mt-2">
-          Here's what's happening with your business today.
+          Hier ist, was heute in Ihrem Unternehmen passiert.
         </TextMD>
       </div>
 
@@ -79,7 +79,7 @@ export function DashboardPage() {
                         {stat.change}
                       </Badge>
                       <TextMD className="text-muted-foreground text-xs">
-                        from last month
+                        vom letzten Monat
                       </TextMD>
                     </Inline>
                   </div>
@@ -99,16 +99,16 @@ export function DashboardPage() {
           {/* Chart Placeholder */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-6">
-              <H2>Analytics Overview</H2>
+              <H2>Statistikübersicht</H2>
               <Button variant="outline" size="sm">
-                View Details
+                Details anzeigen
               </Button>
             </div>
             <div className="h-80 bg-muted rounded-lg flex items-center justify-center">
               <div className="text-center">
                 <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <TextMD className="text-muted-foreground">
-                  Chart component would go here
+                  Diagrammkomponente würde hier erscheinen
                 </TextMD>
               </div>
             </div>
@@ -118,7 +118,7 @@ export function DashboardPage() {
         <GridItem span={1}>
           {/* Recent Activity */}
           <Card className="p-6">
-            <H2 className="mb-6">Recent Activity</H2>
+            <H2 className="mb-6">Kürzliche Aktivitäten</H2>
             <Stack space="md">
               {recentActivity.map((activity) => (
                 <div key={activity.id} className="flex items-start space-x-4">
@@ -136,7 +136,7 @@ export function DashboardPage() {
               ))}
             </Stack>
             <Button variant="outline" size="sm" className="w-full mt-4">
-              View All Activity
+              Alle Aktivitäten anzeigen
             </Button>
           </Card>
         </GridItem>
@@ -144,12 +144,12 @@ export function DashboardPage() {
 
       {/* Quick Actions */}
       <Card className="p-6">
-        <H2 className="mb-4">Quick Actions</H2>
+        <H2 className="mb-4">Schnellaktionen</H2>
         <Inline space="md" wrap={true}>
-          <Button variant="default">Add Product</Button>
-          <Button variant="outline">Manage Users</Button>
-          <Button variant="outline">View Reports</Button>
-          <Button variant="outline">Export Data</Button>
+          <Button variant="default">Produkt hinzufügen</Button>
+          <Button variant="outline">Benutzer verwalten</Button>
+          <Button variant="outline">Berichte anzeigen</Button>
+          <Button variant="outline">Daten exportieren</Button>
         </Inline>
       </Card>
     </div>

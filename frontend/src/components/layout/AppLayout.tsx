@@ -25,7 +25,14 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, user, currentPath, breadcrumbs }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    // Initialize from localStorage, default to false if not found
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('sidebar-collapsed');
+      return stored ? JSON.parse(stored) : false;
+    }
+    return false;
+  });
   const [isMobile, setIsMobile] = useState(false);
 
   // Detect mobile viewport
@@ -71,7 +78,10 @@ export function AppLayout({ children, user, currentPath, breadcrumbs }: AppLayou
     if (isMobile) {
       setSidebarOpen(!sidebarOpen);
     } else {
-      setSidebarCollapsed(!sidebarCollapsed);
+      const newCollapsed = !sidebarCollapsed;
+      setSidebarCollapsed(newCollapsed);
+      // Persist to localStorage
+      localStorage.setItem('sidebar-collapsed', JSON.stringify(newCollapsed));
     }
   };
 
@@ -90,10 +100,10 @@ export function AppLayout({ children, user, currentPath, breadcrumbs }: AppLayou
         <motion.aside
           initial={false}
           animate={{
-            width: sidebarCollapsed ? 72 : 280,
+            width: sidebarCollapsed ? 72 : 320,
           }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="flex-shrink-0 border-r border-border bg-card"
+          className="flex-shrink-0 border-r border-border bg-muted/30 shadow-xl"
         >
           <Sidebar
             collapsed={sidebarCollapsed}
@@ -155,7 +165,7 @@ export function AppLayout({ children, user, currentPath, breadcrumbs }: AppLayou
                 animate={{ x: 0 }}
                 exit={{ x: -320 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="fixed left-0 top-0 z-50 h-full w-80 bg-card border-r border-border"
+                className="fixed left-0 top-0 z-50 h-full w-80 bg-muted/30 border-r border-border shadow-2xl"
               >
                 <Sidebar
                   collapsed={false}

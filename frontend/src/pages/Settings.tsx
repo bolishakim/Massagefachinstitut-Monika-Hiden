@@ -38,12 +38,12 @@ export function SettingsPage() {
   const { user } = useAuth();
 
   const settingsTabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'security', label: 'Security', icon: Shield },
-    { id: 'appearance', label: 'Appearance', icon: Palette },
-    { id: 'language', label: 'Language & Region', icon: Globe },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
+    { id: 'profile', label: 'Profil', icon: User },
+    { id: 'notifications', label: 'Benachrichtigungen', icon: Bell },
+    { id: 'security', label: 'Sicherheit', icon: Shield },
+    { id: 'appearance', label: 'Erscheinungsbild', icon: Palette },
+    { id: 'language', label: 'Sprache & Region', icon: Globe },
+    { id: 'billing', label: 'Abrechnung', icon: CreditCard },
   ];
 
   const languageOptions = [
@@ -62,8 +62,8 @@ export function SettingsPage() {
   ];
 
   const themeOptions = [
-    { value: 'light', label: 'Light' },
-    { value: 'dark', label: 'Dark' },
+    { value: 'light', label: 'Hell' },
+    { value: 'dark', label: 'Dunkel' },
     { value: 'system', label: 'System' },
   ];
 
@@ -73,9 +73,9 @@ export function SettingsPage() {
         return (
           <Stack space="lg">
             <div>
-              <H3>Profile Information</H3>
+              <H3>Profilinformationen</H3>
               <TextMD className="text-muted-foreground mt-1">
-                Update your account's profile information and email address.
+                Aktualisieren Sie die Profilinformationen und E-Mail-Adresse Ihres Kontos.
               </TextMD>
             </div>
 
@@ -92,36 +92,36 @@ export function SettingsPage() {
                     )}
                   </div>
                   <div>
-                    <Button variant="outline" size="sm">Change Avatar</Button>
+                    <Button variant="outline" size="sm">Avatar ändern</Button>
                     <TextMD className="text-muted-foreground text-xs mt-1">
-                      JPG, GIF or PNG. 1MB max.
+                      JPG, GIF oder PNG. Max. 1MB.
                     </TextMD>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                    label="First Name"
+                    label="Vorname"
                     defaultValue={user?.firstName || ''}
-                    placeholder="Enter your first name"
+                    placeholder="Geben Sie Ihren Vornamen ein"
                   />
                   <Input
-                    label="Last Name"
+                    label="Nachname"
                     defaultValue={user?.lastName || ''}
-                    placeholder="Enter your last name"
+                    placeholder="Geben Sie Ihren Nachnamen ein"
                   />
                 </div>
 
                 <Input
-                  label="Email Address"
+                  label="E-Mail-Adresse"
                   type="email"
                   defaultValue={user?.email || ''}
-                  placeholder="Enter your email"
+                  placeholder="Geben Sie Ihre E-Mail-Adresse ein"
                 />
 
                 <Input
-                  label="Bio"
-                  placeholder="Tell us about yourself"
+                  label="Biografie"
+                  placeholder="Erzählen Sie uns etwas über sich"
                   multiline
                   rows={3}
                 />
@@ -129,8 +129,8 @@ export function SettingsPage() {
                 <Divider />
 
                 <div className="flex justify-end space-x-2">
-                  <Button variant="outline">Cancel</Button>
-                  <Button variant="default">Save Changes</Button>
+                  <Button variant="outline">Abbrechen</Button>
+                  <Button variant="default">Änderungen speichern</Button>
                 </div>
               </Stack>
             </Card>
@@ -141,16 +141,16 @@ export function SettingsPage() {
         return (
           <Stack space="lg">
             <div>
-              <H3>Notification Preferences</H3>
+              <H3>Benachrichtigungseinstellungen</H3>
               <TextMD className="text-muted-foreground mt-1">
-                Choose how you want to be notified about activity.
+                Wählen Sie, wie Sie über Aktivitäten benachrichtigt werden möchten.
               </TextMD>
             </div>
 
             <Card className="p-6">
               <Stack space="md">
                 <div>
-                  <H3 className="text-base">Email Notifications</H3>
+                  <H3 className="text-base">E-Mail-Benachrichtigungen</H3>
                   <Stack space="sm" className="mt-4">
                     <Checkbox
                       label="Account updates"
