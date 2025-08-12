@@ -5,14 +5,17 @@ import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useBreadcrumbs } from '@/components/layout/Breadcrumb';
+import { CookieConsentBanner } from '@/components/gdpr/CookieConsentBanner';
 import { AuthPage } from '@/pages/AuthPage';
 import { DashboardPage } from '@/pages/Dashboard';
 import { UserManagementPage } from '@/pages/UserManagementPage';
 import { SettingsPage } from '@/pages/Settings';
 import { AssistantPage } from '@/pages/AssistantPage';
+import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import { PatientsPage, PatientDetailPage, PatientFormPage, PatientHistoryPage } from '@/pages/patients';
 import { ServicesManagementPage } from '@/pages/ServicesManagementPage';
 import { RoomsManagementPage } from '@/pages/RoomsManagementPage';
+import { StaffProfilePage } from '@/pages/StaffProfilePage';
 import { Role } from '@/types';
 import '@/styles/markdown.css';
 
@@ -50,6 +53,7 @@ function App() {
           <Routes>
             {/* Public routes */}
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
             
             {/* Protected routes */}
             <Route
@@ -163,19 +167,6 @@ function App() {
               }
             />
             
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <LayoutWrapper>
-                    <div className="space-y-6">
-                      <h1 className="text-3xl font-bold">Profil</h1>
-                      <p className="text-muted-foreground">Profilseite in Kürze verfügbar...</p>
-                    </div>
-                  </LayoutWrapper>
-                </ProtectedRoute>
-              }
-            />
             
             <Route
               path="/settings"
@@ -265,6 +256,17 @@ function App() {
             />
 
             <Route
+              path="/staff/profile"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <StaffProfilePage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/staff/*"
               element={
                 <ProtectedRoute requiredRoles={[Role.ADMIN, Role.MODERATOR]}>
@@ -326,6 +328,9 @@ function App() {
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
+          
+          {/* Global components */}
+          <CookieConsentBanner />
         </AuthProvider>
       </Router>
     </ThemeProvider>

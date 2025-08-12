@@ -399,7 +399,7 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
                     </div>
                     <div className="py-2">
                       <a
-                        href="/profile"
+                        href="/staff/profile"
                         className="flex items-center px-4 py-2 text-sm hover:bg-accent transition-colors"
                       >
                         <User className="h-4 w-4 mr-3" />

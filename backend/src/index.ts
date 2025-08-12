@@ -18,15 +18,20 @@ import serviceRoutes from './routes/services.js';
 import roomRoutes from './routes/rooms.js';
 import auditRoutes from './routes/audit.js';
 import mfaRoutes from './routes/mfa.js';
+import gdprRoutes from './routes/gdpr.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 import prisma from './utils/db.js';
 import { connectionMonitor } from './utils/connectionMonitor.js';
+import { DataRetentionJob } from './utils/dataRetentionJob.js';
 
 const app = express();
 const PORT = process.env.PORT || 3050;
+
+// Trust proxy for proper IP address detection
+app.set('trust proxy', true);
 
 // Security middleware
 app.use(helmet({
@@ -107,6 +112,7 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/mfa', mfaRoutes);
+app.use('/api/gdpr', gdprRoutes);
 
 // Error handling middleware
 app.use(notFound);
@@ -115,6 +121,10 @@ app.use(errorHandler);
 // Start connection monitoring
 connectionMonitor.startMonitoring(2 * 60 * 1000); // Check every 2 minutes
 connectionMonitor.startMemoryMonitoring(10 * 60 * 1000); // Log memory every 10 minutes
+
+// Initialize GDPR compliance systems
+DataRetentionJob.initializeRetentionPolicies();
+DataRetentionJob.startCleanupJob();
 
 // Initial database connection test
 const initializeServer = async () => {

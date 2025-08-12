@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Home, 
   Users, 
+  User,
   Settings, 
   BarChart3, 
   FileText, 
@@ -136,25 +137,33 @@ const navigationItems: NavItem[] = [
     label: 'Personal',
     icon: Briefcase,
     href: '/staff',
-    requiredRoles: ['admin', 'moderator'],
     children: [
+      {
+        id: 'staff-profile',
+        label: 'Mein Profil',
+        icon: User,
+        href: '/staff/profile',
+      },
       {
         id: 'staff-list',
         label: 'Mitarbeiter',
         icon: Users,
         href: '/staff',
+        requiredRoles: ['admin', 'moderator'],
       },
       {
         id: 'staff-schedules',
         label: 'Arbeitszeiten',
         icon: Clock,
         href: '/staff/schedules',
+        requiredRoles: ['admin', 'moderator'],
       },
       {
         id: 'staff-leaves',
         label: 'Urlaub & Ausfall',
         icon: Calendar,
         href: '/staff/leaves',
+        requiredRoles: ['admin', 'moderator'],
       },
     ],
   },
@@ -188,16 +197,10 @@ const navigationItems: NavItem[] = [
   },
   {
     id: 'settings',
-    label: 'Einstellungen',
+    label: 'Systemverwaltung',
     icon: Settings,
     href: '/settings',
     children: [
-      {
-        id: 'settings-general',
-        label: 'Allgemein',
-        icon: Settings,
-        href: '/settings',
-      },
       {
         id: 'settings-services',
         label: 'Dienstleistungen verwalten',
@@ -233,8 +236,20 @@ const navigationItems: NavItem[] = [
 export function Sidebar({ collapsed, onToggle, currentPath, userRole = 'user', isMobile = false }: SidebarProps) {
   const filterItemsByRole = (items: NavItem[]): NavItem[] => {
     return items.filter(item => {
-      if (!item.requiredRoles) return true;
-      return item.requiredRoles.includes(userRole);
+      // Filter the item itself
+      if (item.requiredRoles && !item.requiredRoles.includes(userRole)) {
+        return false;
+      }
+      
+      // Filter child items if they exist
+      if (item.children) {
+        item.children = item.children.filter(child => {
+          if (!child.requiredRoles) return true;
+          return child.requiredRoles.includes(userRole);
+        });
+      }
+      
+      return true;
     });
   };
 
@@ -248,7 +263,7 @@ export function Sidebar({ collapsed, onToggle, currentPath, userRole = 'user', i
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border h-[146px]">
+      <div className="flex items-center justify-between p-4 border-b border-border h-[118px]">
         <div className="flex items-center space-x-3 min-w-0 flex-1">
           {(!collapsed || isMobile) && (
             <div className="min-w-0 flex-1">

@@ -1,0 +1,239 @@
+{
+  "user": {
+    "id": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+    "email": "bolis.kamel@icloud.com",
+    "password": "[REDACTED]",
+    "firstName": "Bolis",
+    "lastName": "Hakim",
+    "role": "ADMIN",
+    "isActive": true,
+    "createdAt": "2025-08-12T10:55:42.301Z",
+    "updatedAt": "2025-08-12T11:05:57.635Z",
+    "avatar": null,
+    "phone": null,
+    "timezone": null,
+    "resetPasswordToken": null,
+    "resetPasswordExpires": null,
+    "emailVerified": true,
+    "emailVerificationToken": null,
+    "mfaEnabled": false,
+    "mfaSecret": null,
+    "mfaBackupCodes": [],
+    "mfaLastUsed": null,
+    "refreshToken": "[REDACTED]",
+    "lastLoginAt": "2025-08-12T11:05:57.634Z",
+    "specialization": "MEDICAL_MASSAGE",
+    "consentRecords": [
+      {
+        "id": "db5c36d7-4cd0-4fb4-b624-fda823f274db",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "consentType": "SYSTEM_OPTIMIZATION",
+        "granted": true,
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "consentString": "Staff member granted consent for system optimization processing",
+        "expiresAt": null,
+        "withdrawnAt": null,
+        "createdAt": "2025-08-12T10:59:28.630Z",
+        "updatedAt": "2025-08-12T10:59:28.630Z"
+      },
+      {
+        "id": "99dcb80b-2e79-449e-bb8e-30e78119b5c2",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "consentType": "NOTIFICATIONS",
+        "granted": true,
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "consentString": "Staff member granted consent for notifications processing",
+        "expiresAt": null,
+        "withdrawnAt": null,
+        "createdAt": "2025-08-12T10:59:29.670Z",
+        "updatedAt": "2025-08-12T10:59:29.670Z"
+      },
+      {
+        "id": "4d8a4c8a-5bcd-4542-8de9-9120683f744a",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "consentType": "AUDIT_MONITORING",
+        "granted": true,
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "consentString": "Staff member granted consent for audit monitoring processing",
+        "expiresAt": null,
+        "withdrawnAt": null,
+        "createdAt": "2025-08-12T10:59:31.923Z",
+        "updatedAt": "2025-08-12T10:59:31.923Z"
+      },
+      {
+        "id": "274dd2c0-06d4-4428-8ec5-bf7ce9acb923",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "consentType": "SYSTEM_OPTIMIZATION",
+        "granted": false,
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "consentString": "Staff member revoked consent for system optimization processing",
+        "expiresAt": null,
+        "withdrawnAt": null,
+        "createdAt": "2025-08-12T11:00:28.653Z",
+        "updatedAt": "2025-08-12T11:00:28.653Z"
+      },
+      {
+        "id": "02e68a98-676f-49a0-8412-50bd93da5833",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "consentType": "NOTIFICATIONS",
+        "granted": false,
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "consentString": "Staff member revoked consent for notifications processing",
+        "expiresAt": null,
+        "withdrawnAt": null,
+        "createdAt": "2025-08-12T11:00:29.912Z",
+        "updatedAt": "2025-08-12T11:00:29.912Z"
+      },
+      {
+        "id": "373964e6-16f3-4af3-9f9b-53348281f67d",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "consentType": "AUDIT_MONITORING",
+        "granted": false,
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "consentString": "Staff member revoked consent for audit monitoring processing",
+        "expiresAt": null,
+        "withdrawnAt": null,
+        "createdAt": "2025-08-12T11:00:30.829Z",
+        "updatedAt": "2025-08-12T11:00:30.829Z"
+      }
+    ],
+    "dataExportRequests": [
+      {
+        "id": "11c94028-9e97-4da6-9edc-c229390f3295",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "requestType": "EXPORT",
+        "status": "COMPLETED",
+        "requestedData": [
+          "all"
+        ],
+        "filePath": "user-data-export-95c65183-a9a8-46c5-b7bc-4ec051af37cd-1754996803539.json",
+        "downloadedAt": null,
+        "expiresAt": "2025-09-11T11:06:43.502Z",
+        "notes": null,
+        "createdAt": "2025-08-12T11:06:43.502Z",
+        "updatedAt": "2025-08-12T11:06:43.541Z"
+      },
+      {
+        "id": "984d1638-2cdd-4467-8685-1ca6ecf8a3ad",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "requestType": "EXPORT",
+        "status": "PENDING",
+        "requestedData": [
+          "all"
+        ],
+        "filePath": null,
+        "downloadedAt": null,
+        "expiresAt": "2025-09-11T11:10:27.540Z",
+        "notes": null,
+        "createdAt": "2025-08-12T11:10:27.541Z",
+        "updatedAt": "2025-08-12T11:10:27.541Z"
+      }
+    ],
+    "notifications": []
+  },
+  "medicalData": {
+    "patientsCreated": [],
+    "appointments": [],
+    "patientHistory": []
+  },
+  "systemData": {
+    "auditLogs": [],
+    "sessions": [],
+    "consents": [
+      {
+        "id": "db5c36d7-4cd0-4fb4-b624-fda823f274db",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "consentType": "SYSTEM_OPTIMIZATION",
+        "granted": true,
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "consentString": "Staff member granted consent for system optimization processing",
+        "expiresAt": null,
+        "withdrawnAt": null,
+        "createdAt": "2025-08-12T10:59:28.630Z",
+        "updatedAt": "2025-08-12T10:59:28.630Z"
+      },
+      {
+        "id": "99dcb80b-2e79-449e-bb8e-30e78119b5c2",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "consentType": "NOTIFICATIONS",
+        "granted": true,
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "consentString": "Staff member granted consent for notifications processing",
+        "expiresAt": null,
+        "withdrawnAt": null,
+        "createdAt": "2025-08-12T10:59:29.670Z",
+        "updatedAt": "2025-08-12T10:59:29.670Z"
+      },
+      {
+        "id": "4d8a4c8a-5bcd-4542-8de9-9120683f744a",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "consentType": "AUDIT_MONITORING",
+        "granted": true,
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "consentString": "Staff member granted consent for audit monitoring processing",
+        "expiresAt": null,
+        "withdrawnAt": null,
+        "createdAt": "2025-08-12T10:59:31.923Z",
+        "updatedAt": "2025-08-12T10:59:31.923Z"
+      },
+      {
+        "id": "274dd2c0-06d4-4428-8ec5-bf7ce9acb923",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "consentType": "SYSTEM_OPTIMIZATION",
+        "granted": false,
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "consentString": "Staff member revoked consent for system optimization processing",
+        "expiresAt": null,
+        "withdrawnAt": null,
+        "createdAt": "2025-08-12T11:00:28.653Z",
+        "updatedAt": "2025-08-12T11:00:28.653Z"
+      },
+      {
+        "id": "02e68a98-676f-49a0-8412-50bd93da5833",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "consentType": "NOTIFICATIONS",
+        "granted": false,
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "consentString": "Staff member revoked consent for notifications processing",
+        "expiresAt": null,
+        "withdrawnAt": null,
+        "createdAt": "2025-08-12T11:00:29.912Z",
+        "updatedAt": "2025-08-12T11:00:29.912Z"
+      },
+      {
+        "id": "373964e6-16f3-4af3-9f9b-53348281f67d",
+        "userId": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+        "consentType": "AUDIT_MONITORING",
+        "granted": false,
+        "ipAddress": "::1",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "consentString": "Staff member revoked consent for audit monitoring processing",
+        "expiresAt": null,
+        "withdrawnAt": null,
+        "createdAt": "2025-08-12T11:00:30.829Z",
+        "updatedAt": "2025-08-12T11:00:30.829Z"
+      }
+    ]
+  },
+  "exportMetadata": {
+    "exportedAt": "2025-08-12T11:10:27.559Z",
+    "requestedBy": "95c65183-a9a8-46c5-b7bc-4ec051af37cd",
+    "dataTypes": [
+      "profile",
+      "medical",
+      "audit",
+      "consent"
+    ]
+  }
+}

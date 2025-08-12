@@ -71,6 +71,11 @@ model User {
   roomsModified           Room[]           @relation("RoomModifiedBy")
   patientHistoryModified  PatientHistory[] @relation("PatientHistoryModifiedBy")
   
+  // GDPR relationships
+  consentRecords          ConsentRecord[]
+  dataExportRequests      DataExportRequest[]
+  gdprAuditLogs           GDPRAuditLog[]
+  
   @@map("users")
 }
 
@@ -483,4 +488,104 @@ enum NotificationType {
   PACKAGE_EXPIRING
   SYSTEM_ALERT
   APPOINTMENT_CONFLICT
+}
+
+// GDPR Compliance Models
+model ConsentRecord {
+  id             String      @id @default(uuid())
+  userId         String?     // Null for anonymous visitors
+  consentType    ConsentType
+  granted        Boolean     @default(false)
+  ipAddress      String?
+  userAgent      String?
+  consentString  String?     // Detailed consent information
+  expiresAt      DateTime?   // When consent expires
+  withdrawnAt    DateTime?   // When consent was withdrawn
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("consent_records")
+}
+
+enum ConsentType {
+  NECESSARY           // Essential system functions (always required)
+  SYSTEM_OPTIMIZATION // Performance analytics to improve the application
+  NOTIFICATIONS       // Personal notification preferences
+  AUDIT_MONITORING    // Enhanced audit trail monitoring (optional)
+}
+
+model DataExportRequest {
+  id           String                @id @default(uuid())
+  userId       String
+  requestType  DataRequestType       @default(EXPORT)
+  status       DataRequestStatus     @default(PENDING)
+  requestedData String[]             // Array of data types requested
+  filePath     String?               // Path to generated export file
+  downloadedAt DateTime?             // When file was downloaded
+  expiresAt    DateTime              // When export expires
+  notes        String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("data_export_requests")
+}
+
+enum DataRequestType {
+  EXPORT    // Data portability request
+  DELETE    // Right to erasure request
+  RESTRICT  // Right to restrict processing
+}
+
+enum DataRequestStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+model GDPRAuditLog {
+  id            String         @id @default(uuid())
+  userId        String?
+  action        GDPRAction
+  dataType      String         // Type of data accessed/modified
+  recordId      String?        // ID of specific record
+  legalBasis    String?        // Legal basis for processing
+  purpose       String         // Purpose of data processing
+  ipAddress     String?
+  userAgent     String?
+  consentId     String?        // Reference to consent record
+  automated     Boolean        @default(false) // Whether action was automated
+  createdAt     DateTime       @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("gdpr_audit_logs")
+}
+
+enum GDPRAction {
+  DATA_ACCESS      // Data was accessed/viewed
+  DATA_EXPORT      // Data was exported
+  DATA_MODIFICATION // Data was modified
+  DATA_DELETION    // Data was deleted
+  CONSENT_GIVEN    // Consent was provided
+  CONSENT_WITHDRAWN // Consent was withdrawn
+  PROCESSING_RESTRICTED // Processing was restricted
+}
+
+model DataRetentionPolicy {
+  id              String   @id @default(uuid())
+  dataType        String   @unique // Type of data (User, Patient, AuditLog, etc.)
+  retentionPeriod Int      // Retention period in days
+  description     String?
+  legalBasis      String   // Legal basis for retention period
+  autoDelete      Boolean  @default(true) // Whether to auto-delete after retention
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("data_retention_policies")
 }

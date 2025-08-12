@@ -14,7 +14,7 @@ export function AppName({ className, variant = 'elegant', showToggle = false }: 
         src="/assets/logo.png" 
         alt="Massagefachinstitut - Monika Hiden, Heilmasseurin"
         className={clsx("h-auto max-w-full object-contain", className)}
-        style={{ maxHeight: "180px", width: "auto" }}
+        style={{ maxHeight: "161px", width: "auto" }}
         title="Massagefachinstitut - Monika Hiden, Heilmasseurin"
       />
     </div>
@@ -29,7 +29,7 @@ export function AppNameShort({ className }: { className?: string }) {
         src="/assets/logo.png" 
         alt="Massagefachinstitut - Monika Hiden"
         className={clsx("h-auto max-w-full object-contain", className)}
-        style={{ maxHeight: "120px", width: "auto" }}
+        style={{ maxHeight: "107px", width: "auto" }}
         title="Massagefachinstitut - Monika Hiden, Heilmasseurin"
       />
     </div>

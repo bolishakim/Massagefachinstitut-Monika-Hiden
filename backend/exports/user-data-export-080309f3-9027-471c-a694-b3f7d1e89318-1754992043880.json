@@ -1,0 +1,66 @@
+{
+  "user": {
+    "id": "080309f3-9027-471c-a694-b3f7d1e89318",
+    "email": "admin@example.com",
+    "password": "[REDACTED]",
+    "firstName": "Admin",
+    "lastName": "User",
+    "role": "ADMIN",
+    "isActive": true,
+    "createdAt": "2025-08-12T09:39:30.249Z",
+    "updatedAt": "2025-08-12T09:46:06.493Z",
+    "avatar": null,
+    "phone": null,
+    "timezone": null,
+    "resetPasswordToken": null,
+    "resetPasswordExpires": null,
+    "emailVerified": true,
+    "emailVerificationToken": null,
+    "mfaEnabled": false,
+    "mfaSecret": null,
+    "mfaBackupCodes": [],
+    "mfaLastUsed": null,
+    "refreshToken": "[REDACTED]",
+    "lastLoginAt": "2025-08-12T09:46:06.492Z",
+    "specialization": null,
+    "consentRecords": [],
+    "dataExportRequests": [
+      {
+        "id": "49769b4b-cede-448d-b981-8b6cbfbde595",
+        "userId": "080309f3-9027-471c-a694-b3f7d1e89318",
+        "requestType": "EXPORT",
+        "status": "PENDING",
+        "requestedData": [
+          "all"
+        ],
+        "filePath": null,
+        "downloadedAt": null,
+        "expiresAt": "2025-09-11T09:47:23.845Z",
+        "notes": null,
+        "createdAt": "2025-08-12T09:47:23.846Z",
+        "updatedAt": "2025-08-12T09:47:23.846Z"
+      }
+    ],
+    "notifications": []
+  },
+  "medicalData": {
+    "patientsCreated": [],
+    "appointments": [],
+    "patientHistory": []
+  },
+  "systemData": {
+    "auditLogs": [],
+    "sessions": [],
+    "consents": []
+  },
+  "exportMetadata": {
+    "exportedAt": "2025-08-12T09:47:23.880Z",
+    "requestedBy": "080309f3-9027-471c-a694-b3f7d1e89318",
+    "dataTypes": [
+      "profile",
+      "medical",
+      "audit",
+      "consent"
+    ]
+  }
+}

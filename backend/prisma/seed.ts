@@ -8,61 +8,64 @@ async function main() {
 
   // Check if admin already exists
   const existingAdmin = await prisma.user.findUnique({
-    where: { email: 'admin@example.com' }
+    where: { email: 'admin@medicalcenter.com' }
   });
 
   if (existingAdmin) {
-    console.log('❌ Admin user already exists. Skipping seed.');
+    console.log('❌ Medical Center users already exist. Skipping seed.');
     return;
   }
 
   // Create admin user
-  const adminPassword = await PasswordUtils.hash('Admin123!@#');
+  const adminPassword = await PasswordUtils.hash('Admin123');
   const admin = await prisma.user.create({
     data: {
-      email: 'admin@example.com',
+      email: 'admin@medicalcenter.com',
       password: adminPassword,
-      firstName: 'Admin',
-      lastName: 'User',
+      firstName: 'Dr. Admin',
+      lastName: 'Manager',
       role: Role.ADMIN,
       emailVerified: true,
       isActive: true,
+      specialization: 'MEDICAL_MASSAGE',
     },
   });
 
-  // Create moderator user
-  const moderatorPassword = await PasswordUtils.hash('Moderator123!@#');
+  // Create moderator user (Staff Supervisor)
+  const moderatorPassword = await PasswordUtils.hash('Moderator123');
   const moderator = await prisma.user.create({
     data: {
-      email: 'moderator@example.com',
+      email: 'supervisor@medicalcenter.com',
       password: moderatorPassword,
-      firstName: 'Moderator',
-      lastName: 'User',
+      firstName: 'Sarah',
+      lastName: 'Wilson',
       role: Role.MODERATOR,
       emailVerified: true,
       isActive: true,
+      specialization: 'PHYSIOTHERAPY',
     },
   });
 
-  // Create regular user
-  const userPassword = await PasswordUtils.hash('User123!@#');
+  // Create regular user (Staff Member)
+  const userPassword = await PasswordUtils.hash('User123');
   const user = await prisma.user.create({
     data: {
-      email: 'user@example.com',
+      email: 'staff@medicalcenter.com',
       password: userPassword,
-      firstName: 'Regular',
-      lastName: 'User',
+      firstName: 'Emma',
+      lastName: 'Johnson',
       role: Role.USER,
       emailVerified: true,
       isActive: true,
+      specialization: 'MASSAGE',
     },
   });
 
   console.log('✅ Database seeded successfully!');
-  console.log('👤 Created users:');
-  console.log(`   Admin: admin@example.com (password: Admin123!@#)`);
-  console.log(`   Moderator: moderator@example.com (password: Moderator123!@#)`);
-  console.log(`   User: user@example.com (password: User123!@#)`);
+  console.log('👤 Created Medical Center Staff Users:');
+  console.log(`   🏥 Admin: admin@medicalcenter.com (password: Admin123)`);
+  console.log(`   👩‍⚕️ Supervisor: supervisor@medicalcenter.com (password: Moderator123)`);
+  console.log(`   👨‍⚕️ Staff: staff@medicalcenter.com (password: User123)`);
 }
 
 main()

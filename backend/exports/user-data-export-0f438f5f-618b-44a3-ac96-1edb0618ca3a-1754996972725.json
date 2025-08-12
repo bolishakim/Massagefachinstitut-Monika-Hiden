@@ -1,0 +1,66 @@
+{
+  "user": {
+    "id": "0f438f5f-618b-44a3-ac96-1edb0618ca3a",
+    "email": "admin@medicalcenter.com",
+    "password": "[REDACTED]",
+    "firstName": "Dr. Admin",
+    "lastName": "Manager",
+    "role": "ADMIN",
+    "isActive": true,
+    "createdAt": "2025-08-12T11:09:20.128Z",
+    "updatedAt": "2025-08-12T11:09:26.710Z",
+    "avatar": null,
+    "phone": null,
+    "timezone": null,
+    "resetPasswordToken": null,
+    "resetPasswordExpires": null,
+    "emailVerified": true,
+    "emailVerificationToken": null,
+    "mfaEnabled": false,
+    "mfaSecret": null,
+    "mfaBackupCodes": [],
+    "mfaLastUsed": null,
+    "refreshToken": "[REDACTED]",
+    "lastLoginAt": "2025-08-12T11:09:26.709Z",
+    "specialization": "MEDICAL_MASSAGE",
+    "consentRecords": [],
+    "dataExportRequests": [
+      {
+        "id": "bb7a5011-313e-4fde-b0ae-534594ab98ec",
+        "userId": "0f438f5f-618b-44a3-ac96-1edb0618ca3a",
+        "requestType": "EXPORT",
+        "status": "PENDING",
+        "requestedData": [
+          "all"
+        ],
+        "filePath": null,
+        "downloadedAt": null,
+        "expiresAt": "2025-09-11T11:09:32.697Z",
+        "notes": null,
+        "createdAt": "2025-08-12T11:09:32.698Z",
+        "updatedAt": "2025-08-12T11:09:32.698Z"
+      }
+    ],
+    "notifications": []
+  },
+  "medicalData": {
+    "patientsCreated": [],
+    "appointments": [],
+    "patientHistory": []
+  },
+  "systemData": {
+    "auditLogs": [],
+    "sessions": [],
+    "consents": []
+  },
+  "exportMetadata": {
+    "exportedAt": "2025-08-12T11:09:32.725Z",
+    "requestedBy": "0f438f5f-618b-44a3-ac96-1edb0618ca3a",
+    "dataTypes": [
+      "profile",
+      "medical",
+      "audit",
+      "consent"
+    ]
+  }
+}
