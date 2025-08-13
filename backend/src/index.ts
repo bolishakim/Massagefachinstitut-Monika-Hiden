@@ -2,6 +2,9 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Load and validate environment configuration
+import envConfig from './utils/envConfig.js';
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -24,17 +27,29 @@ import gdprRoutes from './routes/gdpr.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 import { enhancedAuditMiddleware, patientAccessLogger } from './middleware/enhancedAuditMiddleware';
+import httpsEnforcement from './middleware/httpsEnforcement.js';
 import prisma from './utils/db.js';
 import { connectionMonitor } from './utils/connectionMonitor.js';
 import { DataRetentionJob } from './utils/dataRetentionJob.js';
 
 const app = express();
-const PORT = process.env.PORT || 3050;
+const PORT = envConfig.PORT;
 
 // Trust proxy for proper IP address detection
 app.set('trust proxy', true);
 
-// Security middleware
+// HTTPS enforcement and security headers (must be first)
+app.use(httpsEnforcement.cookieSecurity);
+app.use(httpsEnforcement.securityHeaders);
+
+// Dynamic HTTPS enforcement based on environment
+if (envConfig.FORCE_HTTPS) {
+  app.use(httpsEnforcement.production);
+} else {
+  app.use(httpsEnforcement.development);
+}
+
+// Enhanced security middleware with HSTS
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -42,20 +57,30 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https:"],
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
     },
   },
+  hsts: {
+    maxAge: envConfig.HSTS_MAX_AGE,
+    includeSubDomains: envConfig.HSTS_INCLUDE_SUBDOMAINS,
+    preload: envConfig.HSTS_PRELOAD
+  },
+  frameguard: { action: 'deny' },
+  noSniff: true,
+  xssFilter: true
 }));
 
 // CORS configuration (must be before rate limiting to ensure CORS headers on rate-limited responses)
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3100',
+  origin: envConfig.CORS_ORIGIN,
   credentials: true,
 }));
 
-// Rate limiting - more lenient for development
+// Rate limiting - configured via environment
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '300000'), // 5 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX || '1000'), // 1000 requests per window
+  windowMs: envConfig.RATE_LIMIT_WINDOW_MS,
+  max: envConfig.RATE_LIMIT_MAX,
   message: {
     error: 'Too many requests from this IP, please try again later.',
   },
@@ -64,7 +89,7 @@ const limiter = rateLimit({
   skipSuccessfulRequests: false, // Count all requests
   skipFailedRequests: false,
   // Skip rate limiting in development
-  skip: (req) => process.env.NODE_ENV === 'development' && req.ip === '::ffff:127.0.0.1' || req.ip === '127.0.0.1' || req.ip === '::1'
+  skip: (req) => envConfig.NODE_ENV === 'development' && (req.ip === '::ffff:127.0.0.1' || req.ip === '127.0.0.1' || req.ip === '::1')
 });
 app.use('/api/', limiter);
 
@@ -107,16 +132,16 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// API routes
+// API routes with enhanced HTTPS enforcement for sensitive endpoints
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/patients', patientRoutes);
-app.use('/api/patient-history', patientHistoryRoutes);
+app.use('/api/patients', httpsEnforcement.strict, patientRoutes);
+app.use('/api/patient-history', httpsEnforcement.strict, patientHistoryRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/rooms', roomRoutes);
-app.use('/api/audit', auditRoutes);
-app.use('/api/mfa', mfaRoutes);
-app.use('/api/gdpr', gdprRoutes);
+app.use('/api/audit', httpsEnforcement.strict, auditRoutes);
+app.use('/api/mfa', httpsEnforcement.strict, mfaRoutes);
+app.use('/api/gdpr', httpsEnforcement.strict, gdprRoutes);
 
 // Error handling middleware
 app.use(notFound);
