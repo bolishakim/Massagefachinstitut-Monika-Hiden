@@ -292,7 +292,6 @@ class EnhancedAuditService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-
     // Get comprehensive patient access data from both GDPR logs and detailed audit logs
     const [gdprLogs, detailedAuditLogs] = await Promise.all([
       prisma.gDPRAuditLog.findMany({
@@ -313,7 +312,7 @@ class EnhancedAuditService {
             }
           }
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'asc' }
       }),
       prisma.auditLog.findMany({
         where: {
@@ -333,24 +332,27 @@ class EnhancedAuditService {
             }
           }
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'asc' }
       })
     ]);
 
-    // Group by patient with comprehensive details
+    // Combine and deduplicate logs by grouping into sessions
+    const allLogs = [
+      ...gdprLogs.map(log => ({ ...log, source: 'gdpr' })),
+      ...detailedAuditLogs.map(log => {
+        const patientId = this.extractPatientIdFromAuditLog(log);
+        return { ...log, recordId: patientId || log.recordId, source: 'audit' };
+      }).filter(log => log.recordId)
+    ];
+    
+    const sessionGroups = this.groupLogsIntoSessions(allLogs);
+
+    // Group by patient with session-based counting
     const patientAccess = new Map<string, any>();
 
-    // Process GDPR logs
-    for (const log of gdprLogs) {
-      if (!log.recordId) continue;
-      await this.processPatientAccessLog(log, patientAccess, 'gdpr');
-    }
-
-    // Process detailed audit logs
-    for (const log of detailedAuditLogs) {
-      const patientId = this.extractPatientIdFromAuditLog(log);
-      if (!patientId) continue;
-      await this.processPatientAccessLog({ ...log, recordId: patientId }, patientAccess, 'audit');
+    // Process each session group as a single access
+    for (const sessionGroup of sessionGroups) {
+      await this.processPatientAccessSession(sessionGroup, patientAccess);
     }
 
     // Convert to array and enrich with comprehensive data
@@ -387,6 +389,147 @@ class EnhancedAuditService {
     );
 
     return result.sort((a, b) => new Date(b.lastAccessed).getTime() - new Date(a.lastAccessed).getTime());
+  }
+
+  private groupLogsIntoSessions(logs: any[]): any[][] {
+    const SESSION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+    const sessionGroups: any[][] = [];
+    const userPatientSessions = new Map<string, any[]>();
+
+    // Sort logs by timestamp to process chronologically
+    const sortedLogs = logs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    for (const log of sortedLogs) {
+      if (!log.user || !log.recordId) continue;
+
+      // Create unique key for user + patient combination
+      const sessionKey = `${log.user.id}-${log.recordId}`;
+      const logTime = new Date(log.createdAt).getTime();
+
+      if (!userPatientSessions.has(sessionKey)) {
+        userPatientSessions.set(sessionKey, []);
+      }
+
+      const userSessions = userPatientSessions.get(sessionKey)!;
+      
+      // Find if this log belongs to an existing session (within time window)
+      let addedToSession = false;
+      for (const session of userSessions) {
+        const sessionStart = Math.min(...session.map((l: any) => new Date(l.createdAt).getTime()));
+        const sessionEnd = Math.max(...session.map((l: any) => new Date(l.createdAt).getTime()));
+        
+        // If log is within 5 minutes of session start or end, add to session
+        if (logTime >= sessionStart - SESSION_WINDOW_MS && logTime <= sessionEnd + SESSION_WINDOW_MS) {
+          session.push(log);
+          addedToSession = true;
+          break;
+        }
+      }
+
+      // If not added to existing session, create new session
+      if (!addedToSession) {
+        userSessions.push([log]);
+      }
+    }
+
+    // Flatten all sessions into single array
+    for (const userSessions of userPatientSessions.values()) {
+      sessionGroups.push(...userSessions);
+    }
+
+    return sessionGroups;
+  }
+
+  private async processPatientAccessSession(sessionLogs: any[], patientAccess: Map<string, any>) {
+    if (sessionLogs.length === 0) return;
+
+    // Use the first log as representative for the session
+    const representativeLog = sessionLogs[0];
+    const patientKey = representativeLog.recordId;
+    
+    if (!patientAccess.has(patientKey)) {
+      // Get patient information
+      const patient = await prisma.patient.findUnique({
+        where: { id: representativeLog.recordId },
+        select: { 
+          firstName: true, 
+          lastName: true, 
+          id: true,
+          email: true,
+          phone: true,
+          dateOfBirth: true
+        }
+      });
+
+      if (!patient) return;
+
+      patientAccess.set(patientKey, {
+        patientId: patient.id,
+        patientName: `${patient.firstName} ${patient.lastName}`,
+        patientEmail: patient.email,
+        patientPhone: patient.phone,
+        patientDOB: patient.dateOfBirth,
+        accessCount: 0,
+        lastAccessed: representativeLog.createdAt,
+        accessors: new Map<string, any>(),
+        firstAccessed: representativeLog.createdAt
+      });
+    }
+
+    const patientData = patientAccess.get(patientKey);
+    
+    // Count this session as ONE access (regardless of how many logs in the session)
+    patientData.accessCount++;
+    
+    // Update session timing
+    const sessionTimes = sessionLogs.map(log => new Date(log.createdAt));
+    const sessionStart = new Date(Math.min(...sessionTimes.map(t => t.getTime())));
+    const sessionEnd = new Date(Math.max(...sessionTimes.map(t => t.getTime())));
+    
+    if (sessionEnd > new Date(patientData.lastAccessed)) {
+      patientData.lastAccessed = sessionEnd;
+    }
+    if (sessionStart < new Date(patientData.firstAccessed)) {
+      patientData.firstAccessed = sessionStart;
+    }
+
+    // Track individual user access within the session
+    if (representativeLog.user) {
+      const userKey = representativeLog.user.id;
+      if (!patientData.accessors.has(userKey)) {
+        patientData.accessors.set(userKey, {
+          userId: representativeLog.user.id,
+          userName: `${representativeLog.user.firstName} ${representativeLog.user.lastName}`,
+          userEmail: representativeLog.user.email,
+          role: representativeLog.user.role,
+          accessCount: 0,
+          lastAccessed: sessionEnd,
+          firstAccessed: sessionStart,
+          accessTypes: new Set(),
+          ipAddresses: new Set(),
+          userAgents: new Set()
+        });
+      }
+
+      const userAccess = patientData.accessors.get(userKey);
+      userAccess.accessCount++; // Count session as one access
+      
+      if (sessionEnd > new Date(userAccess.lastAccessed)) {
+        userAccess.lastAccessed = sessionEnd;
+      }
+      if (sessionStart < new Date(userAccess.firstAccessed)) {
+        userAccess.firstAccessed = sessionStart;
+      }
+
+      // Add access details from all logs in the session
+      for (const log of sessionLogs) {
+        if (log.ipAddress) userAccess.ipAddresses.add(log.ipAddress);
+        if (log.userAgent) userAccess.userAgents.add(log.userAgent);
+        if (log.newValues?.accessType) {
+          userAccess.accessTypes.add(log.newValues.accessType);
+        }
+      }
+    }
   }
 
   private async processPatientAccessLog(log: any, patientAccess: Map<string, any>, source: 'gdpr' | 'audit') {

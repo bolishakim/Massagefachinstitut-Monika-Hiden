@@ -27,7 +27,7 @@ Creates 3 users with different roles:
 
 | Role | Name | Email | Password | Specialization |
 |------|------|-------|----------|----------------|
-| **ADMIN** | Dr. Admin Manager |   | `Admin123!` | Medical Massage |
+| **ADMIN** | Dr. Admin Manager | admin@medicalcenter.com | `Admin123!` | Medical Massage |
 | **MODERATOR** | Sarah Wilson | supervisor@medicalcenter.com | `Supervisor123!` | Physiotherapy |
 | **USER** | Emma Johnson | staff@medicalcenter.com | `Staff123!` | Massage |
 

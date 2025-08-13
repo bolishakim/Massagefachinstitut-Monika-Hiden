@@ -156,14 +156,6 @@ export const enhancedAuditMiddleware = (req: AuthenticatedRequest, res: Response
       const actionType = getActionType(req.method, req.url, res.statusCode);
       const sensitiveDataAccessed = getSensitiveDataTypes(resource, req.body, req.query);
       
-      // Deep debug logging to understand the counting issue
-      if (isPatientData) {
-        console.log(`🔍 AUDIT LOG CREATION: ${req.method} ${req.url}`);
-        console.log(`   - Resource: ${resource}, ID: ${resourceId}`);
-        console.log(`   - Action: ${actionType}, User: ${req.user?.email}`);
-        console.log(`   - Timestamp: ${new Date().toISOString()}`);
-        console.log(`   - Will create audit log entry in database`);
-      }
       
       const auditData: AuditData = {
         userId: req.user?.id,
@@ -194,9 +186,6 @@ export const enhancedAuditMiddleware = (req: AuthenticatedRequest, res: Response
       
       // Log to general audit log (only for authenticated users due to foreign key constraint)
       if (req.user?.id) {
-        if (isPatientData) {
-          console.log(`💾 WRITING AUDIT LOG to database - User: ${req.user.email}, Patient ID: ${resourceId}, Action: ${actionType}`);
-        }
         await prisma.auditLog.create({
           data: {
             userId: req.user.id,
@@ -209,14 +198,10 @@ export const enhancedAuditMiddleware = (req: AuthenticatedRequest, res: Response
             userAgent: auditData.userAgent
           }
         });
-        if (isPatientData) {
-          console.log(`✅ AUDIT LOG WRITTEN to audit_logs table`);
-        }
       }
       
       // Enhanced logging for patient data access
       if (isPatientData && req.user) {
-        console.log(`💾 WRITING GDPR LOG to database - User: ${req.user.email}, Patient ID: ${resourceId}`);
         await prisma.gDPRAuditLog.create({
           data: {
             userId: req.user.id,
@@ -234,7 +219,6 @@ export const enhancedAuditMiddleware = (req: AuthenticatedRequest, res: Response
             automated: false
           }
         });
-        console.log(`✅ GDPR LOG WRITTEN to gdpr_audit_logs table`);
       }
       
       // Log authentication events
@@ -439,7 +423,7 @@ async function logComprehensivePatientAccess(params: {
 
     // Log specific patient access if we have patient information
     if (accessDetails.patientId && accessDetails.patientInfo) {
-      console.log(`🔍 PATIENT ACCESS: ${req.user!.email} (${req.user!.role}) accessed ${accessDetails.accessType} for patient ${accessDetails.patientInfo.name} (ID: ${accessDetails.patientId}) - Duration: ${duration}ms`);
+      // Patient access logged to database only (no console output)
     }
     
   } catch (error) {
