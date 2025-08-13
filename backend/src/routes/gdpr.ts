@@ -9,6 +9,10 @@ import {
   requestAccountDeletion,
   getComplianceInfo,
   recordAnonymousConsent,
+  requestPatientDeletion,
+  bulkDeletePatients,
+  exportPatientData,
+  downloadPatientExport,
 } from '../controllers/gdprController.js';
 
 const router = express.Router();
@@ -31,5 +35,11 @@ router.get('/download-export/:filename', downloadExport);
 
 // Right to erasure (Article 17)
 router.delete('/delete-account', requestAccountDeletion);
+
+// Patient-specific GDPR operations
+router.post('/patient/:patientId/export', exportPatientData);
+router.delete('/patient/:patientId', requestPatientDeletion);
+router.post('/patients/bulk-delete', bulkDeletePatients);
+router.get('/download-patient-export/:filename', downloadPatientExport);
 
 export default router;

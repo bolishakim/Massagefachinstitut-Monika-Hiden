@@ -8,6 +8,8 @@ import {
   bulkDeletePatients,
   reactivatePatient,
   searchPatients,
+  hardDeletePatient,
+  bulkHardDeletePatients,
 } from '../controllers/patientController';
 import { authenticateToken } from '../middleware/auth';
 import { validateRole } from '../middleware/validate';
@@ -40,5 +42,9 @@ router.post('/:id/reactivate', validateRole(['ADMIN', 'MODERATOR']), reactivateP
 
 // DELETE /api/patients/:id - Soft delete patient (admin/moderator only)
 router.delete('/:id', validateRole(['ADMIN', 'MODERATOR']), deletePatient);
+
+// GDPR Hard Delete Operations (Admin only)
+router.post('/bulk-hard-delete', validateRole(['ADMIN']), bulkHardDeletePatients);
+router.delete('/:id/hard-delete', validateRole(['ADMIN']), hardDeletePatient);
 
 export default router;

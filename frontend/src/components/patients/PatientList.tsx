@@ -41,11 +41,13 @@ interface PatientListProps {
   onCreateNew?: () => void;
   onRefresh?: () => void;
   onBulkDelete?: (patientIds: string[]) => Promise<void>;
+  onBulkHardDelete?: (patientIds: string[]) => Promise<void>;
   onReactivatePatient?: (patient: Patient) => Promise<void>;
   onFiltersChange?: (filters: Partial<FilterOptions>) => void;
   className?: string;
   pagination?: PaginatedResponse<Patient>['pagination'];
   onPageChange?: (page: number) => void;
+  userRole?: string;
 }
 
 interface FilterOptions {
@@ -68,11 +70,13 @@ export function PatientList({
   onCreateNew,
   onRefresh,
   onBulkDelete,
+  onBulkHardDelete,
   onReactivatePatient,
   onFiltersChange,
   className,
   pagination,
-  onPageChange
+  onPageChange,
+  userRole
 }: PatientListProps) {
   const [filters, setFilters] = useState<FilterOptions>({
     search: '',
@@ -89,6 +93,7 @@ export function PatientList({
   const [selectedPatients, setSelectedPatients] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showHardDeleteDialog, setShowHardDeleteDialog] = useState(false);
   const [deletingPatients, setDeletingPatients] = useState(false);
 
   // Calculate patient age
@@ -270,6 +275,26 @@ export function PatientList({
 
   const handleDeleteConfirm = () => {
     setShowDeleteDialog(true);
+  };
+
+  const handleHardDeleteConfirm = () => {
+    if (userRole !== 'ADMIN') return;
+    setShowHardDeleteDialog(true);
+  };
+
+  const handleHardDeleteExecute = async () => {
+    if (!onBulkHardDelete || selectedPatients.size === 0 || userRole !== 'ADMIN') return;
+
+    setDeletingPatients(true);
+    try {
+      await onBulkHardDelete(Array.from(selectedPatients));
+      setSelectedPatients(new Set());
+      setShowHardDeleteDialog(false);
+    } catch (error) {
+      console.error('Error hard deleting patients:', error);
+    } finally {
+      setDeletingPatients(false);
+    }
   };
 
   const getInsuranceTypeLabel = (type: InsuranceType | undefined): string => {
@@ -549,9 +574,20 @@ export function PatientList({
                     onClick={handleDeleteConfirm}
                     className="flex items-center gap-2"
                   >
-                    <Trash2 className="h-4 w-4" />
-                    Löschen
+                    <UserX className="h-4 w-4" />
+                    Deaktivieren
                   </Button>
+                  {userRole === 'ADMIN' && onBulkHardDelete && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleHardDeleteConfirm}
+                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      GDPR Permanent löschen
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
@@ -815,9 +851,32 @@ export function PatientList({
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleBulkDelete}
-        title="Patienten löschen"
-        message={`Sind Sie sicher, dass Sie ${selectedPatients.size} Patient${selectedPatients.size !== 1 ? 'en' : ''} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`}
-        confirmText="Löschen"
+        title="Patienten deaktivieren"
+        message={`Sind Sie sicher, dass Sie ${selectedPatients.size} Patient${selectedPatients.size !== 1 ? 'en' : ''} deaktivieren möchten? Die Patienten werden als inaktiv markiert, aber ihre Daten bleiben erhalten.`}
+        confirmText="Deaktivieren"
+        cancelText="Abbrechen"
+        variant="danger"
+        isLoading={deletingPatients}
+      />
+
+      {/* GDPR Hard Delete Dialog */}
+      <ConfirmDialog
+        isOpen={showHardDeleteDialog}
+        onClose={() => setShowHardDeleteDialog(false)}
+        onConfirm={handleHardDeleteExecute}
+        title="GDPR: Permanente Löschung"
+        message={
+          `ACHTUNG: UNWIDERRUFLICHE LÖSCHUNG\n\n` +
+          `Sie sind dabei, ALLE Daten von ${selectedPatients.size} Patient${selectedPatients.size !== 1 ? 'en' : ''} permanent zu löschen.\n\n` +
+          `Dies umfasst für jeden Patienten:\n` +
+          `• Komplettes Patientenprofil\n` +
+          `• Gesamte Krankengeschichte\n` +
+          `• Alle Termine und Behandlungen\n` +
+          `• Behandlungspakete und Zahlungen\n\n` +
+          `Diese Aktion überschreibt die 30-jährige medizinische Aufbewahrungspflicht gemäß GDPR Artikel 17 und kann NIEMALS rückgängig gemacht werden.\n\n` +
+          `NUR fortfahren wenn eine rechtmäßige GDPR-Löschungsanfrage vorliegt.`
+        }
+        confirmText="Permanent löschen"
         cancelText="Abbrechen"
         variant="danger"
         isLoading={deletingPatients}

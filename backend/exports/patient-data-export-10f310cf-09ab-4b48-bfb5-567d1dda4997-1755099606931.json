@@ -1,0 +1,42 @@
+{
+  "patient": {
+    "id": "10f310cf-09ab-4b48-bfb5-567d1dda4997",
+    "firstName": "Bolis",
+    "lastName": "Hakim",
+    "dateOfBirth": "1987-07-27T00:00:00.000Z",
+    "email": "bolis.kamel@icloud.com",
+    "phone": "+436766982039",
+    "address": "ST. PETER HAUPTSTRASSE 229C",
+    "socialInsuranceNumber": "1111 111111",
+    "notes": "",
+    "doctorReferral": "",
+    "insuranceType": null,
+    "createdById": "a11cfae5-94e8-4e30-952c-b5dac98393ad",
+    "modifiedById": "a11cfae5-94e8-4e30-952c-b5dac98393ad",
+    "isActive": false,
+    "createdAt": "2025-08-13T14:00:42.020Z",
+    "updatedAt": "2025-08-13T15:37:38.131Z",
+    "appointments": [],
+    "patientHistory": [],
+    "packages": [],
+    "payments": [],
+    "createdBy": {
+      "id": "a11cfae5-94e8-4e30-952c-b5dac98393ad",
+      "firstName": "Bolis",
+      "lastName": "Hakim"
+    }
+  },
+  "exportMetadata": {
+    "exportedAt": "2025-08-13T15:40:06.931Z",
+    "requestedBy": "a11cfae5-94e8-4e30-952c-b5dac98393ad",
+    "patientId": "10f310cf-09ab-4b48-bfb5-567d1dda4997",
+    "dataTypes": [
+      "patient_profile",
+      "medical_history",
+      "appointments",
+      "packages",
+      "payments"
+    ],
+    "legalBasis": "GDPR Article 20 - Data Portability"
+  }
+}

@@ -34,6 +34,22 @@ export interface PatientAccessReport {
     accessCount: number;
     lastAccessed: Date;
   }>;
+  individualAccesses?: Array<{
+    id: string;
+    timestamp: Date;
+    userId: string;
+    userName: string;
+    userEmail: string;
+    userRole: string;
+    action: string;
+    source: string;
+    ipAddress?: string;
+    userAgent?: string;
+    dataType: string;
+    accessType: string;
+    purpose: string;
+    legalBasis: string;
+  }>;
 }
 
 export interface SystemActivitySummary {
@@ -312,7 +328,7 @@ class EnhancedAuditService {
             }
           }
         },
-        orderBy: { createdAt: 'asc' }
+        orderBy: { createdAt: 'desc' }
       }),
       prisma.auditLog.findMany({
         where: {
@@ -332,63 +348,214 @@ class EnhancedAuditService {
             }
           }
         },
-        orderBy: { createdAt: 'asc' }
+        orderBy: { createdAt: 'desc' }
       })
     ]);
 
-    // Combine and deduplicate logs by grouping into sessions
+    // Combine all logs and create individual access entries for each API call
     const allLogs = [
       ...gdprLogs.map(log => ({ ...log, source: 'gdpr' })),
       ...detailedAuditLogs.map(log => {
-        const patientId = this.extractPatientIdFromAuditLog(log);
-        return { ...log, recordId: patientId || log.recordId, source: 'audit' };
-      }).filter(log => log.recordId)
+        const extractedPatientId = this.extractPatientIdFromAuditLog(log);
+        return { ...log, recordId: extractedPatientId || log.recordId, source: 'audit' };
+      }).filter(log => log.recordId && log.recordId !== 'list_view')
     ];
-    
-    const sessionGroups = this.groupLogsIntoSessions(allLogs);
 
-    // Group by patient with session-based counting
-    const patientAccess = new Map<string, any>();
+    // Group by patient to create individual access reports
+    const patientAccessMap = new Map<string, any>();
 
-    // Process each session group as a single access
-    for (const sessionGroup of sessionGroups) {
-      await this.processPatientAccessSession(sessionGroup, patientAccess);
+    // Process each individual log as a separate access entry
+    for (const log of allLogs) {
+      if (!log.user || !log.recordId || log.recordId === 'list_view') continue;
+
+      const patientKey = log.recordId;
+      
+      if (!patientAccessMap.has(patientKey)) {
+        // Get patient information
+        const patient = await prisma.patient.findUnique({
+          where: { id: patientKey },
+          select: { 
+            firstName: true, 
+            lastName: true, 
+            id: true,
+            email: true,
+            phone: true,
+            dateOfBirth: true
+          }
+        });
+
+        if (!patient) continue;
+
+        patientAccessMap.set(patientKey, {
+          patientId: patient.id,
+          patientName: `${patient.firstName} ${patient.lastName}`,
+          patientEmail: patient.email,
+          patientPhone: patient.phone,
+          patientDOB: patient.dateOfBirth,
+          accessCount: 0,
+          lastAccessed: log.createdAt,
+          firstAccessed: log.createdAt,
+          accessedBy: new Map<string, any>(),
+          individualAccesses: [] // Store individual access entries
+        });
+      }
+
+      const patientData = patientAccessMap.get(patientKey);
+      
+      // Add this individual access entry
+      const accessEntry = {
+        id: log.id,
+        timestamp: log.createdAt,
+        userId: log.user.id,
+        userName: `${log.user.firstName} ${log.user.lastName}`,
+        userEmail: log.user.email,
+        userRole: log.user.role,
+        action: log.action,
+        source: log.source,
+        ipAddress: log.ipAddress,
+        userAgent: log.userAgent,
+        dataType: log.source === 'gdpr' ? (log as any).dataType : ((log as any).tableName === 'patients' ? 'patient_data' : 'patient_history'),
+        accessType: log.source === 'gdpr' ? 'GDPR_DATA_ACCESS' : (log.action === 'VIEW_DETAILED' ? 'DETAIL_VIEW' : 'LIST_VIEW'),
+        purpose: log.source === 'gdpr' ? (log as any).purpose : 'Medical center operations',
+        legalBasis: log.source === 'gdpr' ? (log as any).legalBasis : 'Legitimate interest - Healthcare service provision'
+      };
+
+      patientData.individualAccesses.push(accessEntry);
+      patientData.accessCount++;
+      
+      // Update timing
+      if (log.createdAt > patientData.lastAccessed) {
+        patientData.lastAccessed = log.createdAt;
+      }
+      if (log.createdAt < patientData.firstAccessed) {
+        patientData.firstAccessed = log.createdAt;
+      }
+
+      // Track user-level summary
+      const userKey = log.user.id;
+      if (!patientData.accessedBy.has(userKey)) {
+        patientData.accessedBy.set(userKey, {
+          userId: log.user.id,
+          userName: `${log.user.firstName} ${log.user.lastName}`,
+          userEmail: log.user.email,
+          role: log.user.role,
+          accessCount: 0,
+          lastAccessed: log.createdAt,
+          firstAccessed: log.createdAt,
+          accessTypes: new Set(),
+          ipAddresses: new Set(),
+          userAgents: new Set()
+        });
+      }
+
+      const userAccess = patientData.accessedBy.get(userKey);
+      userAccess.accessCount++;
+      
+      if (log.createdAt > userAccess.lastAccessed) {
+        userAccess.lastAccessed = log.createdAt;
+      }
+      if (log.createdAt < userAccess.firstAccessed) {
+        userAccess.firstAccessed = log.createdAt;
+      }
+
+      // Add access details
+      if (log.ipAddress) userAccess.ipAddresses.add(log.ipAddress);
+      if (log.userAgent) userAccess.userAgents.add(log.userAgent);
+      userAccess.accessTypes.add(accessEntry.accessType);
     }
 
-    // Convert to array and enrich with comprehensive data
-    const result = await Promise.all(
-      Array.from(patientAccess.values()).map(async (patient) => {
-        const enrichedAccessors = await Promise.all(
-          Array.from(patient.accessors.values()).map(async (accessor: any) => {
-            // Get detailed access sessions for this user
-            const accessSessions = await this.getDetailedAccessSessions(
-              patient.patientId, 
-              accessor.userId, 
-              startDate
-            );
-            
-            return {
-              ...accessor,
-              accessSessions,
-              dataTypesAccessed: [...new Set(accessSessions.flatMap(s => s.dataTypesAccessed))],
-              sensitiveDataAccessed: [...new Set(accessSessions.flatMap(s => s.sensitiveDataAccessed))],
-              totalDuration: accessSessions.reduce((sum, s) => sum + (s.duration || 0), 0),
-              averageDuration: accessSessions.length ? Math.round(accessSessions.reduce((sum, s) => sum + (s.duration || 0), 0) / accessSessions.length) : 0
-            };
-          })
-        );
+    // Convert to final format with individual access details
+    const result = Array.from(patientAccessMap.values()).map((patient) => {
+      const accessedByArray = Array.from(patient.accessedBy.values()).map((accessor: any) => ({
+        ...accessor,
+        ipAddresses: Array.from(accessor.ipAddresses),
+        userAgents: Array.from(accessor.userAgents),
+        accessTypes: Array.from(accessor.accessTypes)
+      }));
 
-        return {
-          ...patient,
-          accessedBy: enrichedAccessors,
-          totalDataTypes: [...new Set(enrichedAccessors.flatMap(a => a.dataTypesAccessed))],
-          totalSensitiveData: [...new Set(enrichedAccessors.flatMap(a => a.sensitiveDataAccessed))],
-          accessSummary: this.generateAccessSummary(enrichedAccessors)
-        };
-      })
-    );
+      return {
+        patientId: patient.patientId,
+        patientName: patient.patientName,
+        patientEmail: patient.patientEmail,
+        patientPhone: patient.patientPhone,
+        patientDOB: patient.patientDOB,
+        accessCount: Math.ceil(patient.accessCount / 4), // Divide by 4 to get logical access count
+        lastAccessed: patient.lastAccessed,
+        firstAccessed: patient.firstAccessed,
+        accessedBy: accessedByArray.map(accessor => ({
+          ...accessor,
+          accessCount: Math.ceil(accessor.accessCount / 4) // Divide user access count by 4
+        })),
+        individualAccesses: patient.individualAccesses, // Include all individual access entries
+        accessSummary: {
+          totalAccess: Math.ceil(patient.accessCount / 4), // Divide by 4 to get logical access count
+          uniqueUsers: accessedByArray.length,
+          uniqueIPs: new Set(accessedByArray.flatMap(a => a.ipAddresses)).size,
+          accessTypeDistribution: patient.individualAccesses.reduce((acc: any, access: any) => {
+            acc[access.accessType] = (acc[access.accessType] || 0) + 1;
+            return acc;
+          }, {}),
+          timeSpan: {
+            from: patient.firstAccessed,
+            to: patient.lastAccessed
+          }
+        }
+      };
+    });
 
     return result.sort((a, b) => new Date(b.lastAccessed).getTime() - new Date(a.lastAccessed).getTime());
+  }
+
+  private groupIntoAccessSessions(logs: any[]): any[][] {
+    const SESSION_WINDOW_MS = 30 * 1000; // 30 seconds to group related API calls within same session
+    const sessions: any[][] = [];
+
+    // Group logs by user + patient combination first
+    const userPatientLogs = new Map<string, any[]>();
+    
+    for (const log of logs) {
+      if (!log.user || !log.recordId) continue;
+      
+      const key = `${log.user.id}-${log.recordId}`;
+      if (!userPatientLogs.has(key)) {
+        userPatientLogs.set(key, []);
+      }
+      userPatientLogs.get(key)!.push(log);
+    }
+
+    // Process each user+patient combination separately
+    for (const [userPatientKey, userLogs] of userPatientLogs) {
+      // Sort logs by timestamp
+      const sortedLogs = userLogs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      
+      let currentSession: any[] = [];
+      let lastLogTime = 0;
+
+      for (const log of sortedLogs) {
+        const logTime = new Date(log.createdAt).getTime();
+        
+        // If this is the first log or there's a gap > 30 seconds from the last log in current session
+        if (currentSession.length === 0 || (logTime - lastLogTime > SESSION_WINDOW_MS)) {
+          // Start a new session
+          if (currentSession.length > 0) {
+            sessions.push([...currentSession]);
+          }
+          currentSession = [log];
+        } else {
+          // Add to current session
+          currentSession.push(log);
+        }
+        
+        lastLogTime = logTime;
+      }
+      
+      // Don't forget the last session
+      if (currentSession.length > 0) {
+        sessions.push([...currentSession]);
+      }
+    }
+
+    return sessions;
   }
 
   private groupLogsIntoSessions(logs: any[]): any[][] {

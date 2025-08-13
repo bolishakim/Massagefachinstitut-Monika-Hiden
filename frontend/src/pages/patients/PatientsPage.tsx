@@ -4,17 +4,20 @@ import { PatientList } from '@/components/patients';
 import { patientService } from '@/services/patients';
 import { Patient, PaginatedResponse } from '@/types';
 import { Alert } from '@/components/ui/Alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 export function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [pagination, setPagination] = useState<PaginatedResponse<Patient>['pagination'] | undefined>();
   const [currentFilters, setCurrentFilters] = useState<any>({});
   
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Get current page, search and status filter from URL
   const currentPage = parseInt(searchParams.get('page') || '1');
@@ -142,10 +145,54 @@ export function PatientsPage() {
     setCurrentFilters(filters);
   };
 
+  const handleBulkHardDelete = async (patientIds: string[]) => {
+    if (!user || user.role !== 'ADMIN') {
+      setError('Administratorrechte erforderlich für permanente Löschung');
+      return;
+    }
+
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await patientService.bulkHardDeletePatients(patientIds);
+      
+      if (response.success && response.data) {
+        setSuccessMessage(`${response.data.deletedCount} Patient${response.data.deletedCount !== 1 ? 'en' : ''} und alle zugehörigen Daten wurden permanent gelöscht`);
+        
+        // Show errors if any
+        if (response.data.errors && response.data.errors.length > 0) {
+          const errorMessage = response.data.errors.join('; ');
+          setError(`Teilweise erfolgreich. Fehler: ${errorMessage}`);
+        }
+        
+        // Refresh the patient list after successful deletion
+        await loadPatients(currentPage, searchQuery, currentFilters);
+      } else {
+        setError(response.error || 'Fehler beim permanenten Löschen der Patienten');
+      }
+    } catch (err) {
+      console.error('Error bulk hard deleting patients:', err);
+      setError('Fehler beim permanenten Löschen der Patienten');
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {successMessage && (
+        <Alert variant="success" dismissible onDismiss={() => setSuccessMessage(null)}>
+          <CheckCircle2 className="h-4 w-4" />
+          <div>
+            <h4 className="font-medium">Erfolg</h4>
+            <p className="text-sm">{successMessage}</p>
+          </div>
+        </Alert>
+      )}
+
+      {/* Error Message */}
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" dismissible onDismiss={() => setError(null)}>
           <AlertCircle className="h-4 w-4" />
           <div>
             <h4 className="font-medium">Fehler</h4>
@@ -163,10 +210,12 @@ export function PatientsPage() {
         onCreateNew={handleCreateNew}
         onRefresh={handleRefresh}
         onBulkDelete={handleBulkDelete}
+        onBulkHardDelete={handleBulkHardDelete}
         onReactivatePatient={handleReactivatePatient}
         onFiltersChange={handleFiltersChange}
         pagination={pagination}
         onPageChange={handlePageChange}
+        userRole={user?.role}
       />
     </div>
   );

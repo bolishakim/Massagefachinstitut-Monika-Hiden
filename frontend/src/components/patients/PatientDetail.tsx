@@ -17,7 +17,10 @@ import {
   CheckCircle,
   Plus,
   History,
-  Activity
+  Activity,
+  Shield,
+  Download,
+  Trash2
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
@@ -37,8 +40,11 @@ interface PatientDetailProps {
   onScheduleAppointment?: (patient: Patient) => void;
   onCreatePackage?: (patient: Patient) => void;
   onAddHistory?: (patient: Patient) => void;
+  onExportPatientData?: (patient: Patient) => void;
+  onHardDeletePatient?: (patient: Patient) => void;
   className?: string;
   loading?: boolean;
+  userRole?: string;
 }
 
 type TabType = 'overview' | 'appointments' | 'packages' | 'history' | 'payments';
@@ -54,8 +60,11 @@ export function PatientDetail({
   onScheduleAppointment,
   onCreatePackage,
   onAddHistory,
+  onExportPatientData,
+  onHardDeletePatient,
   className,
-  loading = false
+  loading = false,
+  userRole
 }: PatientDetailProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
 
@@ -411,6 +420,45 @@ export function PatientDetail({
                         </div>
                       </div>
                     ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* GDPR Actions - Admin only */}
+              {userRole === 'ADMIN' && (onExportPatientData || onHardDeletePatient) && (
+                <Card className="p-6 border-orange-200 bg-orange-50">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-orange-800">
+                    <Shield className="h-5 w-5" />
+                    GDPR Datenschutz
+                  </h3>
+                  <div className="space-y-3">
+                    {onExportPatientData && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full justify-start border-orange-300 text-orange-700 hover:bg-orange-100"
+                        onClick={() => onExportPatientData(patient)}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Patientendaten exportieren
+                      </Button>
+                    )}
+                    {onHardDeletePatient && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full justify-start border-red-300 text-red-700 hover:bg-red-100"
+                        onClick={() => onHardDeletePatient(patient)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Alle Daten permanent löschen
+                      </Button>
+                    )}
+                  </div>
+                  <div className="mt-3 p-3 bg-orange-100 rounded-md">
+                    <p className="text-xs text-orange-700">
+                      <strong>GDPR Artikel 17:</strong> Permanente Löschung entfernt alle Patientendaten unwiderruflich aus dem System. Diese Aktion überschreibt die 30-jährige medizinische Aufbewahrungspflicht bei rechtmäßiger Anfrage.
+                    </p>
                   </div>
                 </Card>
               )}

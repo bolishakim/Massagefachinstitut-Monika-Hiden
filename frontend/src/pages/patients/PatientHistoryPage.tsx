@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Search, FileText, User, Filter, Plus, Edit, Trash2, Save, X, Stethoscope, AlertCircle, Activity, CheckCircle, Loader2 } from 'lucide-react';
+import { Search, FileText, User, Filter, Plus, Edit, Trash2, Save, X, Stethoscope, AlertCircle, Activity, CheckCircle, Loader2, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PatientHistoryEntry, patientHistoryService } from '@/services/patientHistory';
 import { patientService } from '@/services/patients';
@@ -34,6 +34,7 @@ export function PatientHistoryPage() {
     isOpen: boolean;
     entry: PatientHistoryEntry | null;
   }>({ isOpen: false, entry: null });
+  const [viewingEntry, setViewingEntry] = useState<PatientHistoryEntry | null>(null);
 
   const loadPatientHistory = async () => {
     try {
@@ -80,6 +81,11 @@ export function PatientHistoryPage() {
   useEffect(() => {
     loadPatientHistory();
   }, [currentPage, selectedPatient, searchQuery]);
+
+  const handleViewEntry = (entry: PatientHistoryEntry) => {
+    // Show detailed view of the history entry
+    setViewingEntry(entry);
+  };
 
   const handleEdit = (entry: PatientHistoryEntry) => {
     setEditingEntry(entry);
@@ -347,6 +353,14 @@ export function PatientHistoryPage() {
                   {/* Actions */}
                   <div className="col-span-1 flex justify-center items-center gap-1">
                     <button
+                      onClick={() => handleViewEntry(entry)}
+                      className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded"
+                      title="Krankengeschichte anzeigen"
+                      disabled={deleting === entry.id}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                    <button
                       onClick={() => handleEdit(entry)}
                       className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded"
                       title="Bearbeiten"
@@ -431,6 +445,188 @@ export function PatientHistoryPage() {
         variant="danger"
         isLoading={deleting === deleteConfirmation.entry?.id}
       />
+
+      {/* History Entry Detail View Modal */}
+      <AnimatePresence>
+        {viewingEntry && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-background rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold">Krankengeschichte</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {viewingEntry.patient.firstName} {viewingEntry.patient.lastName} • {formatDate(viewingEntry.recordedAt)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setViewingEntry(null)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                {/* Patient Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/20 rounded-lg">
+                  <div>
+                    <h3 className="font-medium text-sm text-muted-foreground mb-1">Patient</h3>
+                    <p className="font-semibold">{viewingEntry.patient.firstName} {viewingEntry.patient.lastName}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-sm text-muted-foreground mb-1">Aufzeichnungsdatum</h3>
+                    <p>{formatDate(viewingEntry.recordedAt)}</p>
+                  </div>
+                  {viewingEntry.appointment && (
+                    <>
+                      <div>
+                        <h3 className="font-medium text-sm text-muted-foreground mb-1">Behandlung</h3>
+                        <p>{viewingEntry.appointment.service.nameGerman || viewingEntry.appointment.service.name}</p>
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-sm text-muted-foreground mb-1">Termin</h3>
+                        <p>{new Date(viewingEntry.appointment.scheduledDate).toLocaleDateString('de-DE')}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* ANAMNESE Section */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Stethoscope className="h-5 w-5" />
+                    ANAMNESE
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium text-sm text-muted-foreground mb-2">Subjektives Hauptproblem</h4>
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <p className="text-sm">
+                          {viewingEntry.mainSubjectiveProblem || <span className="text-muted-foreground italic">Nicht angegeben</span>}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium text-sm text-muted-foreground mb-2">Symptomanamnese</h4>
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <p className="text-sm">
+                          {viewingEntry.symptomHistory || <span className="text-muted-foreground italic">Nicht angegeben</span>}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium text-sm text-muted-foreground mb-2">Bisheriger Verlauf und Therapie</h4>
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <p className="text-sm">
+                          {viewingEntry.previousCourseAndTherapy || <span className="text-muted-foreground italic">Nicht angegeben</span>}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium text-sm text-muted-foreground mb-2">Ziele des Patienten</h4>
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <p className="text-sm">
+                          {viewingEntry.patientGoals || <span className="text-muted-foreground italic">Nicht angegeben</span>}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ALLGEMEINE INSPEKTION Section */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    ALLGEMEINE INSPEKTION
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium text-sm text-muted-foreground mb-2">Aktivitätszustand</h4>
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <p className="text-sm">
+                          {viewingEntry.activityStatus || <span className="text-muted-foreground italic">Nicht angegeben</span>}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium text-sm text-muted-foreground mb-2">Besonderheiten des Rumpfes und des Kopfes</h4>
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <p className="text-sm">
+                          {viewingEntry.trunkAndHeadParticularities || <span className="text-muted-foreground italic">Nicht angegeben</span>}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium text-sm text-muted-foreground mb-2">Ödeme, Trophik, Atrophien</h4>
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <p className="text-sm">
+                          {viewingEntry.edemaTrophicsAtrophies || <span className="text-muted-foreground italic">Nicht angegeben</span>}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Notes */}
+                {viewingEntry.notes && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Zusätzliche Notizen</h3>
+                    <div className="p-3 bg-muted/30 rounded-lg">
+                      <p className="text-sm">{viewingEntry.notes}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between p-6 border-t bg-muted/20">
+                <div className="text-sm text-muted-foreground">
+                  Erstellt am: {new Date(viewingEntry.createdAt).toLocaleString('de-DE')}
+                  {viewingEntry.updatedAt !== viewingEntry.createdAt && (
+                    <span> • Aktualisiert am: {new Date(viewingEntry.updatedAt).toLocaleString('de-DE')}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setViewingEntry(null);
+                      handleEdit(viewingEntry);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Bearbeiten
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setViewingEntry(null)}
+                  >
+                    Schließen
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -447,8 +643,10 @@ function PatientHistoryForm({ entry, patients, onSubmit, onCancel }: PatientHist
   const [formData, setFormData] = useState({
     patientId: entry?.patientId || '',
     // ANAMNESE (Medical History)
+    generalImpression: entry?.notes || '', // Use notes as general impression for backwards compatibility
     mainSubjectiveProblem: entry?.mainSubjectiveProblem || '',
     symptomHistory: entry?.symptomHistory || '',
+    medicalHistory: entry?.previousCourseAndTherapy || '', // Use previousCourseAndTherapy as medical history
     previousCourseAndTherapy: entry?.previousCourseAndTherapy || '',
     patientGoals: entry?.patientGoals || '',
     // ALLGEMEINE INSPEKTION (General Inspection)

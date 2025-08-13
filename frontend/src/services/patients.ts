@@ -192,6 +192,123 @@ class PatientService {
       data: []
     };
   }
+
+  // GDPR Hard Delete Operations
+  async hardDeletePatient(id: string, reason?: string): Promise<ApiResponse<{ message: string; deletionReason: string }>> {
+    try {
+      // For DELETE requests, we need to send data in the body using a custom config
+      const result = await apiService.post<{ message: string; deletionReason: string }>(`/patients/${id}/hard-delete`, {
+        confirmDeletion: true,
+        reason: reason || 'GDPR Right to Erasure request'
+      });
+      return result;
+    } catch (error: any) {
+      console.error('Error permanently deleting patient:', error);
+      if (error.error === 'Patient not found') {
+        return {
+          success: false,
+          error: 'Patient nicht gefunden'
+        };
+      }
+      if (error.error === 'Administrative privileges required for permanent patient deletion') {
+        return {
+          success: false,
+          error: 'Administratorrechte erforderlich für permanente Löschung'
+        };
+      }
+      if (error.error === 'Access token is required') {
+        return {
+          success: false,
+          error: 'Sie sind nicht angemeldet. Bitte melden Sie sich erneut an.'
+        };
+      }
+      return {
+        success: false,
+        error: error.error || 'Fehler beim permanenten Löschen des Patienten'
+      };
+    }
+  }
+
+  async bulkHardDeletePatients(patientIds: string[], reason?: string): Promise<ApiResponse<{ deletedCount: number; errors: string[]; deletionReason: string }>> {
+    try {
+      const result = await apiService.post<{ deletedCount: number; errors: string[]; deletionReason: string }>('/patients/bulk-hard-delete', {
+        patientIds,
+        confirmDeletion: true,
+        reason: reason || 'GDPR Bulk Right to Erasure request'
+      });
+      return result;
+    } catch (error: any) {
+      console.error('Error bulk permanently deleting patients:', error);
+      if (error.error === 'Administrative privileges required for bulk permanent deletion') {
+        return {
+          success: false,
+          error: 'Administratorrechte erforderlich für permanente Massenlöschung'
+        };
+      }
+      return {
+        success: false,
+        error: error.error || 'Fehler beim permanenten Löschen der Patienten'
+      };
+    }
+  }
+
+  async exportPatientData(patientId: string): Promise<ApiResponse<{ requestId: string; downloadUrl: string; expiresIn: string }>> {
+    try {
+      const result = await apiService.post<{ requestId: string; downloadUrl: string; expiresIn: string }>(`/gdpr/patient/${patientId}/export`);
+      return result;
+    } catch (error: any) {
+      console.error('Error exporting patient data:', error);
+      if (error.error === 'Patient not found') {
+        return {
+          success: false,
+          error: 'Patient nicht gefunden'
+        };
+      }
+      if (error.error === 'Access token is required') {
+        return {
+          success: false,
+          error: 'Sie sind nicht angemeldet. Bitte melden Sie sich erneut an.'
+        };
+      }
+      return {
+        success: false,
+        error: error.error || 'Fehler beim Exportieren der Patientendaten'
+      };
+    }
+  }
+
+  async downloadPatientExport(filename: string): Promise<void> {
+    try {
+      // Make an authenticated request to download the file
+      const baseURL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:3050/api';
+      const response = await fetch(`${baseURL}/gdpr/download-patient-export/${filename}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Get the blob and create download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Download failed' }));
+        throw new Error(errorData.error || 'Download failed');
+      }
+    } catch (error) {
+      console.error('Error downloading patient export:', error);
+      throw error;
+    }
+  }
 }
 
 export const patientService = new PatientService();
