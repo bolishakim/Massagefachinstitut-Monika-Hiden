@@ -334,7 +334,7 @@ class EnhancedAuditService {
         where: {
           createdAt: { gte: startDate },
           action: { in: ['VIEW_DETAILED', 'VIEW_LIST'] },
-          tableName: { in: ['patients', 'patient_history'] },
+          tableName: { in: ['Patient', 'PatientHistory'] },
           ...(patientId && { recordId: patientId })
         },
         include: {
@@ -414,7 +414,7 @@ class EnhancedAuditService {
         source: log.source,
         ipAddress: log.ipAddress,
         userAgent: log.userAgent,
-        dataType: log.source === 'gdpr' ? (log as any).dataType : ((log as any).tableName === 'patients' ? 'patient_data' : 'patient_history'),
+        dataType: log.source === 'gdpr' ? (log as any).dataType : ((log as any).tableName === 'Patient' ? 'patient_data' : 'patient_history'),
         accessType: log.source === 'gdpr' ? 'GDPR_DATA_ACCESS' : (log.action === 'VIEW_DETAILED' ? 'DETAIL_VIEW' : 'LIST_VIEW'),
         purpose: log.source === 'gdpr' ? (log as any).purpose : 'Medical center operations',
         legalBasis: log.source === 'gdpr' ? (log as any).legalBasis : 'Legitimate interest - Healthcare service provision'
@@ -797,7 +797,7 @@ class EnhancedAuditService {
         userId,
         createdAt: { gte: startDate },
         recordId: patientId,
-        tableName: { in: ['patients', 'patient_history'] }
+        tableName: { in: ['Patient', 'PatientHistory'] }
       },
       orderBy: { createdAt: 'desc' }
     });

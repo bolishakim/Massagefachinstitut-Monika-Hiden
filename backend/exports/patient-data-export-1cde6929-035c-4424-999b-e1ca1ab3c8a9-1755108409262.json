@@ -1,0 +1,67 @@
+{
+  "patient": {
+    "id": "1cde6929-035c-4424-999b-e1ca1ab3c8a9",
+    "firstName": "Bolis",
+    "lastName": "Hakim",
+    "dateOfBirth": "1987-08-27T00:00:00.000Z",
+    "email": "bolis.kamel@icloud.com",
+    "phone": "+436766982039",
+    "address": "ST. PETER HAUPTSTRASSE 229C",
+    "socialInsuranceNumber": null,
+    "notes": "",
+    "doctorReferral": "",
+    "insuranceType": null,
+    "createdById": "a11cfae5-94e8-4e30-952c-b5dac98393ad",
+    "modifiedById": null,
+    "isActive": true,
+    "createdAt": "2025-08-13T17:08:12.511Z",
+    "updatedAt": "2025-08-13T17:08:12.511Z",
+    "appointments": [],
+    "patientHistory": [
+      {
+        "id": "56fb777d-26eb-4eb7-8849-8a199e97b5a9",
+        "patientId": "1cde6929-035c-4424-999b-e1ca1ab3c8a9",
+        "packageId": null,
+        "appointmentId": null,
+        "mainSubjectiveProblem": "2",
+        "symptomHistory": "4",
+        "previousCourseAndTherapy": "5",
+        "patientGoals": "6",
+        "activityStatus": "7",
+        "trunkAndHeadParticularities": "8",
+        "edemaTrophicsAtrophies": "9",
+        "notes": "0",
+        "createdById": "a11cfae5-94e8-4e30-952c-b5dac98393ad",
+        "modifiedById": null,
+        "recordedAt": "2025-08-13T15:48:00.000Z",
+        "createdAt": "2025-08-13T17:48:53.145Z",
+        "updatedAt": "2025-08-13T17:48:53.145Z",
+        "createdBy": {
+          "id": "a11cfae5-94e8-4e30-952c-b5dac98393ad",
+          "firstName": "Bolis",
+          "lastName": "Hakim"
+        }
+      }
+    ],
+    "packages": [],
+    "payments": [],
+    "createdBy": {
+      "id": "a11cfae5-94e8-4e30-952c-b5dac98393ad",
+      "firstName": "Bolis",
+      "lastName": "Hakim"
+    }
+  },
+  "exportMetadata": {
+    "exportedAt": "2025-08-13T18:06:49.262Z",
+    "requestedBy": "a11cfae5-94e8-4e30-952c-b5dac98393ad",
+    "patientId": "1cde6929-035c-4424-999b-e1ca1ab3c8a9",
+    "dataTypes": [
+      "patient_profile",
+      "medical_history",
+      "appointments",
+      "packages",
+      "payments"
+    ],
+    "legalBasis": "GDPR Article 20 - Data Portability"
+  }
+}

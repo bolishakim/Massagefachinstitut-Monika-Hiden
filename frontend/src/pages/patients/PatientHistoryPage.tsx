@@ -19,6 +19,7 @@ export function PatientHistoryPage() {
   const isNewRoute = location.pathname === '/patients/history/new';
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<string>('');
   const [history, setHistory] = useState<PatientHistoryEntry[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -43,7 +44,7 @@ export function PatientHistoryPage() {
         currentPage,
         20,
         selectedPatient || undefined,
-        searchQuery || undefined
+        debouncedSearchQuery || undefined
       );
       
       if (response.success && response.data) {
@@ -74,17 +75,41 @@ export function PatientHistoryPage() {
     }
   };
 
+  // Debounce search query for API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Only search if query is empty or has at least 1 character
+      setDebouncedSearchQuery(searchQuery);
+    }, 150); // Reduced from 300ms to 150ms for faster response
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   useEffect(() => {
     loadPatients();
   }, []);
 
   useEffect(() => {
     loadPatientHistory();
-  }, [currentPage, selectedPatient, searchQuery]);
+  }, [currentPage, selectedPatient, debouncedSearchQuery]);
 
-  const handleViewEntry = (entry: PatientHistoryEntry) => {
-    // Show detailed view of the history entry
-    setViewingEntry(entry);
+  const handleViewEntry = async (entry: PatientHistoryEntry) => {
+    try {
+      // Call the API to get the history entry details (this triggers audit logging)
+      const response = await patientHistoryService.getPatientHistoryById(entry.id);
+      
+      if (response.success && response.data) {
+        // Show detailed view of the history entry with fresh data
+        setViewingEntry(response.data);
+      } else {
+        // Fallback to the entry we already have
+        setViewingEntry(entry);
+      }
+    } catch (error) {
+      console.error('Error fetching patient history details:', error);
+      // Fallback to the entry we already have
+      setViewingEntry(entry);
+    }
   };
 
   const handleEdit = (entry: PatientHistoryEntry) => {
@@ -156,6 +181,39 @@ export function PatientHistoryPage() {
     });
   };
 
+  const highlightSearchTerm = (text: string, searchTerm: string) => {
+    if (!searchTerm || !text || searchTerm.trim().length === 0) return text;
+    
+    // Escape special regex characters
+    const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
+    // Create regex for partial matching (case insensitive)
+    const regex = new RegExp(`(${escapedSearchTerm})`, 'gi');
+    const parts = text.split(regex);
+    
+    return (
+      <span>
+        {parts.map((part, index) => {
+          // Check if this part matches the search term
+          const isMatch = regex.test(part);
+          // Reset regex lastIndex to avoid issues with global flag
+          regex.lastIndex = 0;
+          
+          return isMatch ? (
+            <mark 
+              key={index} 
+              className="bg-yellow-200 dark:bg-yellow-800/50 px-0.5 py-0.5 rounded text-yellow-900 dark:text-yellow-100 font-medium transition-colors"
+            >
+              {part}
+            </mark>
+          ) : (
+            <span key={index}>{part}</span>
+          );
+        })}
+      </span>
+    );
+  };
+
   if (showForm) {
     return (
       <PatientHistoryForm
@@ -218,11 +276,32 @@ export function PatientHistoryPage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <input
             type="text"
-            placeholder="Nach Patient oder Inhalt suchen..."
+            placeholder="Nach Patient oder Inhalt suchen... (beliebige Länge)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-4 py-2 w-full border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setSearchQuery('');
+              }
+            }}
+            className="pl-10 pr-10 py-2 w-full border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+            autoComplete="off"
+            spellCheck="false"
           />
+          {searchQuery !== debouncedSearchQuery && searchQuery && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+            </div>
+          )}
+          {searchQuery && searchQuery === debouncedSearchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              title="Suche löschen"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
         
         <div className="relative">
@@ -241,6 +320,28 @@ export function PatientHistoryPage() {
           </select>
         </div>
       </div>
+
+      {/* Search Results Info */}
+      {(searchQuery || selectedPatient) && !loading && (
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <span>
+              {history.length} Ergebnis{history.length !== 1 ? 'se' : ''} gefunden
+              {searchQuery && ` für "${searchQuery}"`}
+              {selectedPatient && (
+                <>
+                  {' '} in {patients.find(p => p.id === selectedPatient)?.firstName} {patients.find(p => p.id === selectedPatient)?.lastName}
+                </>
+              )}
+            </span>
+          </div>
+          {searchQuery && (
+            <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+              💡 Echtzeit-Hervorhebung aktiv
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Results */}
       <div className="bg-card rounded-lg border">
@@ -268,11 +369,16 @@ export function PatientHistoryPage() {
                   {/* Patient Name */}
                   <div className="col-span-2">
                     <div className="font-medium text-foreground">
-                      {entry.patient.firstName} {entry.patient.lastName}
+                      {highlightSearchTerm(`${entry.patient.firstName} ${entry.patient.lastName}`, searchQuery)}
                     </div>
                     {entry.appointment && (
                       <div className="text-xs text-muted-foreground mt-1">
                         {entry.appointment.service.nameGerman || entry.appointment.service.name}
+                      </div>
+                    )}
+                    {entry.patient.dateOfBirth && (
+                      <div className="text-xs text-muted-foreground">
+                        Geb. {new Date(entry.patient.dateOfBirth).toLocaleDateString('de-DE')}
                       </div>
                     )}
                   </div>
@@ -289,9 +395,12 @@ export function PatientHistoryPage() {
                     <div className="text-sm">
                       {entry.mainSubjectiveProblem ? (
                         <span className="text-foreground">
-                          {entry.mainSubjectiveProblem.length > 100 
-                            ? `${entry.mainSubjectiveProblem.substring(0, 100)}...` 
-                            : entry.mainSubjectiveProblem}
+                          {highlightSearchTerm(
+                            entry.mainSubjectiveProblem.length > 100 
+                              ? `${entry.mainSubjectiveProblem.substring(0, 100)}...` 
+                              : entry.mainSubjectiveProblem,
+                            searchQuery
+                          )}
                         </span>
                       ) : (
                         <span className="text-muted-foreground italic">Nicht angegeben</span>
@@ -304,9 +413,12 @@ export function PatientHistoryPage() {
                     <div className="text-sm">
                       {entry.symptomHistory ? (
                         <span className="text-foreground">
-                          {entry.symptomHistory.length > 100 
-                            ? `${entry.symptomHistory.substring(0, 100)}...` 
-                            : entry.symptomHistory}
+                          {highlightSearchTerm(
+                            entry.symptomHistory.length > 100 
+                              ? `${entry.symptomHistory.substring(0, 100)}...` 
+                              : entry.symptomHistory,
+                            searchQuery
+                          )}
                         </span>
                       ) : (
                         <span className="text-muted-foreground italic">Nicht angegeben</span>
@@ -319,9 +431,12 @@ export function PatientHistoryPage() {
                     <div className="text-sm">
                       {entry.activityStatus ? (
                         <span className="text-foreground">
-                          {entry.activityStatus.length > 80 
-                            ? `${entry.activityStatus.substring(0, 80)}...` 
-                            : entry.activityStatus}
+                          {highlightSearchTerm(
+                            entry.activityStatus.length > 80 
+                              ? `${entry.activityStatus.substring(0, 80)}...` 
+                              : entry.activityStatus,
+                            searchQuery
+                          )}
                         </span>
                       ) : (
                         <span className="text-muted-foreground italic">Nicht angegeben</span>
@@ -414,17 +529,47 @@ export function PatientHistoryPage() {
           <div className="p-8 text-center">
             <FileText className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">Keine Einträge gefunden</h3>
-            <p className="text-muted-foreground">
-              {searchQuery || selectedPatient
-                ? 'Keine Krankengeschichte entspricht den aktuellen Suchkriterien.'
-                : 'Es sind noch keine Krankengeschichte-Einträge vorhanden.'}
+            <p className="text-muted-foreground mb-4">
+              {searchQuery || selectedPatient ? (
+                <>
+                  Keine Krankengeschichte entspricht den aktuellen Suchkriterien.
+                  {searchQuery && (
+                    <span className="block mt-2">
+                      Suchbegriff: <code className="bg-muted px-2 py-1 rounded font-mono text-sm">{searchQuery}</code>
+                    </span>
+                  )}
+                </>
+              ) : (
+                'Es sind noch keine Krankengeschichte-Einträge vorhanden.'
+              )}
             </p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="mt-4 text-primary hover:underline"
-            >
-              Ersten Eintrag erstellen
-            </button>
+            {(searchQuery || selectedPatient) ? (
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedPatient('');
+                  }}
+                  className="text-primary hover:underline"
+                >
+                  Suchfilter zurücksetzen
+                </button>
+                <span className="hidden sm:inline text-muted-foreground">oder</span>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="text-primary hover:underline"
+                >
+                  Neuen Eintrag erstellen
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowForm(true)}
+                className="mt-4 text-primary hover:underline"
+              >
+                Ersten Eintrag erstellen
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -658,6 +803,7 @@ function PatientHistoryForm({ entry, patients, onSubmit, onCancel }: PatientHist
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(1);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -696,6 +842,13 @@ function PatientHistoryForm({ entry, patients, onSubmit, onCancel }: PatientHist
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Prevent double submission
+    if (isSubmitting) {
+      console.warn('Form submission already in progress, ignoring duplicate submission');
+      return;
+    }
+    
+    
     if (!validateStep(1)) {
       setCurrentStep(1);
       return;
@@ -706,11 +859,25 @@ function PatientHistoryForm({ entry, patients, onSubmit, onCancel }: PatientHist
     setFormSuccess(null);
 
     try {
+      // Transform form data to match backend schema
+      const transformedData = {
+        patientId: formData.patientId,
+        mainSubjectiveProblem: formData.mainSubjectiveProblem,
+        symptomHistory: formData.symptomHistory,
+        previousCourseAndTherapy: formData.previousCourseAndTherapy || formData.medicalHistory, // Use medicalHistory as fallback
+        patientGoals: formData.patientGoals,
+        activityStatus: formData.activityStatus,
+        trunkAndHeadParticularities: formData.trunkAndHeadParticularities,
+        edemaTrophicsAtrophies: formData.edemaTrophicsAtrophies,
+        notes: formData.notes || formData.generalImpression, // Use generalImpression as fallback for notes
+        recordedAt: formData.recordedAt
+      };
+
       let response;
       if (entry) {
-        response = await patientHistoryService.updatePatientHistory(entry.id, formData);
+        response = await patientHistoryService.updatePatientHistory(entry.id, transformedData);
       } else {
-        response = await patientHistoryService.createPatientHistory(formData);
+        response = await patientHistoryService.createPatientHistory(transformedData);
       }
 
       if (response.success) {
@@ -819,7 +986,7 @@ function PatientHistoryForm({ entry, patients, onSubmit, onCancel }: PatientHist
         </div>
 
         <form onSubmit={handleSubmit}>
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait" initial={false}>
             {/* Step 1: Basic Information */}
             {currentStep === 1 && (
               <motion.div
@@ -1101,6 +1268,7 @@ function PatientHistoryForm({ entry, patients, onSubmit, onCancel }: PatientHist
                     Zurück
                   </Button>
                   <Button
+                    key="save-button-step3"
                     type="submit"
                     disabled={isSubmitting}
                     className="flex items-center gap-2"

@@ -6,8 +6,6 @@ export interface PatientHistoryEntry {
   patientId: string;
   packageId?: string;
   appointmentId?: string;
-  generalImpression?: string;
-  medicalHistory?: string;
   mainSubjectiveProblem?: string;
   symptomHistory?: string;
   previousCourseAndTherapy?: string;
@@ -51,8 +49,6 @@ export interface PatientHistoryForm {
   patientId: string;
   packageId?: string;
   appointmentId?: string;
-  generalImpression?: string;
-  medicalHistory?: string;
   mainSubjectiveProblem?: string;
   symptomHistory?: string;
   previousCourseAndTherapy?: string;

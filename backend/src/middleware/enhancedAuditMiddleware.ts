@@ -55,7 +55,7 @@ function getResourceInfo(url: string, method: string): { resource: string; resou
     
     // If first part is a UUID, this is likely a patient access
     if (/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(firstPart)) {
-      resource = 'patients'; // Assume patient access
+      resource = 'Patient'; // Assume patient access
       resourceId = firstPart;
     }
     // Normal pattern: /api/patients/123 or /api/patients/123/history
@@ -70,7 +70,7 @@ function getResourceInfo(url: string, method: string): { resource: string; resou
   }
   
   // Check if this route accesses patient data
-  const isPatientData = resource === 'patients' || 
+  const isPatientData = resource === 'Patient' || 
                         resource === 'patient-history' ||
                         PATIENT_DATA_ROUTES.some(route => url.startsWith(route));
   
@@ -95,7 +95,7 @@ function getActionType(method: string, url: string, statusCode?: number): string
 function getSensitiveDataTypes(resource: string, body: any, query: any): string[] {
   const sensitiveData: string[] = [];
   
-  if (resource === 'patients') {
+  if (resource === 'Patient') {
     sensitiveData.push('patient_personal_data');
     if (body?.socialInsuranceNumber || query?.ssn) {
       sensitiveData.push('social_insurance_number');
@@ -355,7 +355,7 @@ function shouldLogPatientAccess(url: string, method: string, resource: string): 
   }
   
   // Log specific patient data resources
-  if (resource && ['patients', 'patient-history', 'patient_history'].includes(resource)) {
+  if (resource && ['Patient', 'patient-history', 'PatientHistory'].includes(resource)) {
     return true;
   }
   
@@ -435,7 +435,7 @@ async function logComprehensivePatientAccess(params: {
 async function determineAccessDetails(url: string, method: string, resourceId?: string, responseData?: any) {
   let accessType = 'unknown';
   let dataType = 'patient_data';
-  let tableName = 'patients';
+  let tableName = 'Patient';
   let patientId = resourceId;
   let patientInfo: any = null;
   let dataTypesAccessed: string[] = [];
@@ -447,7 +447,7 @@ async function determineAccessDetails(url: string, method: string, resourceId?: 
     if (resourceId) {
       accessType = 'patient_detail_view';
       dataType = 'patient_personal_data';
-      tableName = 'patients';
+      tableName = 'Patient';
       dataTypesAccessed = ['personal_information', 'contact_details', 'insurance_info'];
       
       // Get patient information
@@ -494,7 +494,7 @@ async function determineAccessDetails(url: string, method: string, resourceId?: 
       dataTypesAccessed = ['patient_names', 'basic_info'];
     }
   } else if (url.includes('/api/patient-history')) {
-    tableName = 'patient_history';
+    tableName = 'PatientHistory';
     dataType = 'medical_history_data';
     dataTypesAccessed = ['medical_history', 'treatment_records', 'anamnesis'];
     sensitiveDataAccessed = ['medical_records', 'health_data'];

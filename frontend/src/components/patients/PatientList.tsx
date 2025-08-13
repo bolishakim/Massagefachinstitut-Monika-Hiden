@@ -95,6 +95,50 @@ export function PatientList({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showHardDeleteDialog, setShowHardDeleteDialog] = useState(false);
   const [deletingPatients, setDeletingPatients] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search for API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(filters.search);
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [filters.search]);
+
+  // Highlight search terms in real-time
+  const highlightSearchTerm = (text: string, searchTerm: string) => {
+    if (!searchTerm || !text || searchTerm.trim().length === 0) return text;
+    
+    // Escape special regex characters
+    const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
+    // Create regex for partial matching (case insensitive)
+    const regex = new RegExp(`(${escapedSearchTerm})`, 'gi');
+    const parts = text.split(regex);
+    
+    return (
+      <span>
+        {parts.map((part, index) => {
+          // Check if this part matches the search term
+          const isMatch = regex.test(part);
+          // Reset regex lastIndex to avoid issues with global flag
+          regex.lastIndex = 0;
+          
+          return isMatch ? (
+            <mark 
+              key={index} 
+              className="bg-yellow-200 dark:bg-yellow-800/50 px-0.5 py-0.5 rounded text-yellow-900 dark:text-yellow-100 font-medium transition-colors"
+            >
+              {part}
+            </mark>
+          ) : (
+            <span key={index}>{part}</span>
+          );
+        })}
+      </span>
+    );
+  };
 
   // Calculate patient age
   const calculateAge = (dateOfBirth: string | undefined): number | null => {
@@ -413,11 +457,32 @@ export function PatientList({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
               <Input
                 type="text"
-                placeholder="Suchen Sie nach Name, Telefon oder E-Mail..."
+                placeholder="Suchen Sie nach Name, Telefon oder E-Mail... (beliebige Länge)"
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="pl-10"
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    handleFilterChange('search', '');
+                  }
+                }}
+                className="pl-10 pr-10"
+                autoComplete="off"
+                spellCheck="false"
               />
+              {filters.search !== debouncedSearch && filters.search && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+                </div>
+              )}
+              {filters.search && filters.search === debouncedSearch && (
+                <button
+                  onClick={() => handleFilterChange('search', '')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  title="Suche löschen"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <Button
               variant="outline"
@@ -534,13 +599,21 @@ export function PatientList({
       </Card>
 
       {/* Results Summary */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
-          {filteredPatients.length} von {patients.length} Patienten
-          {filteredPatients.length !== patients.length && ' (gefiltert)'}
-        </span>
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <span>
+            {filteredPatients.length} von {patients.length} Patienten
+            {filteredPatients.length !== patients.length && ' (gefiltert)'}
+            {filters.search && ` für "${filters.search}"`}
+          </span>
+          {filters.search && (
+            <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+              💡 Echtzeit-Hervorhebung aktiv
+            </div>
+          )}
+        </div>
         {selectedPatients.size > 0 && (
-          <span>{selectedPatients.size} ausgewählt</span>
+          <span className="text-muted-foreground">{selectedPatients.size} ausgewählt</span>
         )}
       </div>
 
@@ -674,10 +747,10 @@ export function PatientList({
                           "font-medium",
                           !patient.isActive && "line-through text-muted-foreground"
                         )}>
-                          {patient.firstName} {patient.lastName}
+                          {highlightSearchTerm(`${patient.firstName} ${patient.lastName}`, filters.search)}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          {patient.socialInsuranceNumber ? `SVN: ${patient.socialInsuranceNumber}` : 'Keine SVN'}
+                          Patient ID: {patient.id.slice(-8)}
                         </p>
                       </div>
                     </div>
@@ -687,12 +760,12 @@ export function PatientList({
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-sm">
                           <Phone className="h-3 w-3" />
-                          <span>{patient.phone}</span>
+                          <span>{highlightSearchTerm(patient.phone || '', filters.search)}</span>
                         </div>
                         {patient.email && (
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Mail className="h-3 w-3" />
-                            <span className="truncate">{patient.email}</span>
+                            <span className="truncate">{highlightSearchTerm(patient.email, filters.search)}</span>
                           </div>
                         )}
                       </div>
