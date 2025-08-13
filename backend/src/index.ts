@@ -23,6 +23,7 @@ import gdprRoutes from './routes/gdpr.js';
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
+import { enhancedAuditMiddleware, patientAccessLogger } from './middleware/enhancedAuditMiddleware';
 import prisma from './utils/db.js';
 import { connectionMonitor } from './utils/connectionMonitor.js';
 import { DataRetentionJob } from './utils/dataRetentionJob.js';
@@ -72,6 +73,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(compression());
+
+// Enhanced audit logging middleware (after authentication middleware)
+app.use('/api', enhancedAuditMiddleware);
 
 // Health check endpoint with database connectivity
 app.get('/health', async (req, res) => {

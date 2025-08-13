@@ -16,6 +16,7 @@ import { PatientsPage, PatientDetailPage, PatientFormPage, PatientHistoryPage } 
 import { ServicesManagementPage } from '@/pages/ServicesManagementPage';
 import { RoomsManagementPage } from '@/pages/RoomsManagementPage';
 import { StaffProfilePage } from '@/pages/StaffProfilePage';
+import { AuditLogsPage } from '@/pages/AuditLogsPage';
 import { Role } from '@/types';
 import '@/styles/markdown.css';
 
@@ -184,7 +185,7 @@ function App() {
               element={
                 <ProtectedRoute requiredRoles={[Role.ADMIN]}>
                   <LayoutWrapper>
-                    <SettingsPage user={{ id: '1', name: 'John Doe', email: 'john.doe@example.com', role: 'admin' }} />
+                    <AuditLogsPage />
                   </LayoutWrapper>
                 </ProtectedRoute>
               }

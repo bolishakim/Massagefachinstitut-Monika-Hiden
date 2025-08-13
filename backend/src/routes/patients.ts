@@ -11,10 +11,10 @@ import {
 } from '../controllers/patientController';
 import { authenticateToken } from '../middleware/auth';
 import { validateRole } from '../middleware/validate';
-
 const router = express.Router();
 
 // All patient routes require authentication
+// Note: Enhanced audit logging is applied globally to all /api routes
 router.use(authenticateToken);
 
 // GET /api/patients - Get all patients with pagination and filters
