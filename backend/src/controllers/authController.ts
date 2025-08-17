@@ -565,16 +565,44 @@ export const getProfile = async (req: Request, res: Response) => {
 export const updateProfile = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    const { firstName, lastName, phone, timezone } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized'
+      });
+    }
+
+    const { firstName, lastName, phone, timezone, email } = req.body;
+
+    // If email is being updated, check if it's already taken
+    if (email) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(409).json({
+          success: false,
+          error: 'Email is already taken by another user'
+        });
+      }
+    }
+
+    const updateData: any = {};
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (phone) updateData.phone = phone;
+    if (timezone) updateData.timezone = timezone;
+    if (email) {
+      updateData.email = email;
+      // If email is changed, mark as unverified and user needs to verify again
+      updateData.emailVerified = false;
+    }
 
     const user = await prisma.user.update({
       where: { id: userId },
-      data: {
-        ...(firstName && { firstName }),
-        ...(lastName && { lastName }),
-        ...(phone && { phone }),
-        ...(timezone && { timezone })
-      },
+      data: updateData,
       select: {
         id: true,
         email: true,
@@ -629,13 +657,13 @@ export const verifyEmail = async (req: Request, res: Response) => {
       }
     });
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Email verified successfully'
     });
   } catch (error) {
     console.error('Email verification error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Internal server error'
     });

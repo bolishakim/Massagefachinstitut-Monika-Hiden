@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { AuditService } from '../services/auditService';
+import { GDPRService } from '../services/gdprService.js';
 const prisma = new PrismaClient();
 // Validation schemas
 const createPatientSchema = z.object({
@@ -527,6 +528,116 @@ export const reactivatePatient = async (req, res) => {
         });
     }
 };
+// Hard delete patient (GDPR Article 17 - Right to Erasure)
+export const hardDeletePatient = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { confirmDeletion, reason } = req.body;
+        // Get user ID from request for audit tracking
+        const userId = req.user?.id;
+        const user = req.user;
+        if (!userId || !user) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated',
+            });
+        }
+        // Only admins can perform hard deletions
+        if (user.role !== 'ADMIN') {
+            return res.status(403).json({
+                success: false,
+                error: 'Administrative privileges required for permanent patient deletion',
+            });
+        }
+        if (!confirmDeletion) {
+            return res.status(400).json({
+                success: false,
+                error: 'Deletion confirmation required',
+            });
+        }
+        if (!id) {
+            return res.status(400).json({
+                success: false,
+                error: 'Patient ID is required',
+            });
+        }
+        const result = await GDPRService.hardDeletePatient(req, id, userId);
+        if (result.success) {
+            return res.json({
+                success: true,
+                message: 'Patient and all associated medical records have been permanently deleted per GDPR Article 17',
+                deletionReason: reason || 'GDPR Right to Erasure request',
+            });
+        }
+        else {
+            return res.status(500).json({
+                success: false,
+                error: result.error,
+            });
+        }
+    }
+    catch (error) {
+        console.error('Error hard deleting patient:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to permanently delete patient',
+        });
+    }
+};
+// Bulk hard delete patients (GDPR Article 17 - Admin only)
+export const bulkHardDeletePatients = async (req, res) => {
+    try {
+        const { patientIds, confirmDeletion, reason } = req.body;
+        // Validate input
+        if (!Array.isArray(patientIds) || patientIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Patient IDs array is required and cannot be empty',
+            });
+        }
+        // Get user ID from request for audit tracking
+        const userId = req.user?.id;
+        const user = req.user;
+        if (!userId || !user) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated',
+            });
+        }
+        // Only admins can perform bulk hard deletions
+        if (user.role !== 'ADMIN') {
+            return res.status(403).json({
+                success: false,
+                error: 'Administrative privileges required for bulk permanent deletion',
+            });
+        }
+        if (!confirmDeletion) {
+            return res.status(400).json({
+                success: false,
+                error: 'Deletion confirmation required',
+            });
+        }
+        const result = await GDPRService.bulkHardDeletePatients(req, patientIds, userId);
+        return res.json({
+            success: result.success,
+            message: result.success
+                ? `Successfully permanently deleted ${result.deletedCount} patients and all associated medical records`
+                : 'Some permanent deletions failed',
+            data: {
+                deletedCount: result.deletedCount,
+                errors: result.errors,
+                deletionReason: reason || 'GDPR Bulk Right to Erasure request',
+            },
+        });
+    }
+    catch (error) {
+        console.error('Error bulk hard deleting patients:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to permanently delete patients',
+        });
+    }
+};
 // Search patients
 export const searchPatients = async (req, res) => {
     try {
@@ -562,14 +673,14 @@ export const searchPatients = async (req, res) => {
                 firstName: 'asc',
             },
         });
-        res.json({
+        return res.json({
             success: true,
             data: patients,
         });
     }
     catch (error) {
         console.error('Error searching patients:', error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             error: 'Failed to search patients',
         });

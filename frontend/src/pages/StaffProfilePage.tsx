@@ -10,6 +10,9 @@ import {
   Sun,
   Moon,
   Monitor,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
 } from 'lucide-react';
 import { H2, H3, TextMD } from '../components/ui/Typography';
 import { Card } from '../components/ui/Card';
@@ -20,6 +23,7 @@ import { Select } from '../components/ui/Select';
 import { Stack } from '../components/ui/Layout';
 import { Badge } from '../components/ui/Badge';
 import { Divider } from '../components/ui/Layout';
+import { Alert } from '../components/ui/Alert';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { MFASettings } from '../components/settings/MFASettings';
@@ -32,9 +36,30 @@ export function StaffProfilePage() {
     push: false,
     sms: false,
   });
+  const [profileForm, setProfileForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { theme, setTheme, isDark } = useTheme();
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
+
+  // Initialize form with user data
+  React.useEffect(() => {
+    if (user) {
+      setProfileForm({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+      });
+    }
+  }, [user]);
 
   const profileTabs = [
     { id: 'profile', label: 'Mein Profil', icon: User },
@@ -66,6 +91,37 @@ export function StaffProfilePage() {
     { value: 'system', label: 'System' },
   ];
 
+  const handleProfileFormChange = (field: string, value: string) => {
+    setProfileForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleUpdateProfile = async () => {
+    try {
+      setIsUpdating(true);
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      
+      const result = await updateProfile(profileForm);
+      
+      if (result.success) {
+        setSuccessMessage('Profil erfolgreich aktualisiert');
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setErrorMessage(result.error || 'Fehler beim Aktualisieren des Profils');
+      }
+    } catch (error) {
+      console.error('Profile update error:', error);
+      setErrorMessage('Ein unerwarteter Fehler ist aufgetreten.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'profile':
@@ -77,6 +133,28 @@ export function StaffProfilePage() {
                 Aktualisieren Sie Ihre persönlichen Informationen und E-Mail-Adresse.
               </TextMD>
             </div>
+
+            {/* Success Message */}
+            {successMessage && (
+              <Alert variant="success" dismissible onDismiss={() => setSuccessMessage(null)}>
+                <CheckCircle className="h-4 w-4" />
+                <div>
+                  <h4 className="font-medium">Erfolg</h4>
+                  <p className="text-sm">{successMessage}</p>
+                </div>
+              </Alert>
+            )}
+
+            {/* Error Message */}
+            {errorMessage && (
+              <Alert variant="destructive" dismissible onDismiss={() => setErrorMessage(null)}>
+                <AlertCircle className="h-4 w-4" />
+                <div>
+                  <h4 className="font-medium">Fehler</h4>
+                  <p className="text-sm">{errorMessage}</p>
+                </div>
+              </Alert>
+            )}
 
             <Card className="p-6">
               <Stack space="md">
@@ -102,12 +180,14 @@ export function StaffProfilePage() {
                   <Input
                     label="Vorname"
                     placeholder="Ihr Vorname"
-                    defaultValue={user?.firstName || ''}
+                    value={profileForm.firstName}
+                    onChange={(e) => handleProfileFormChange('firstName', e.target.value)}
                   />
                   <Input
                     label="Nachname"
                     placeholder="Ihr Nachname"
-                    defaultValue={user?.lastName || ''}
+                    value={profileForm.lastName}
+                    onChange={(e) => handleProfileFormChange('lastName', e.target.value)}
                   />
                 </div>
 
@@ -115,14 +195,16 @@ export function StaffProfilePage() {
                   label="E-Mail-Adresse"
                   type="email"
                   placeholder="ihre.email@medicalcenter.com"
-                  defaultValue={user?.email || ''}
+                  value={profileForm.email}
+                  onChange={(e) => handleProfileFormChange('email', e.target.value)}
                 />
 
                 <Input
                   label="Telefonnummer"
                   type="tel"
                   placeholder="+43 xxx xxx xx xx"
-                  defaultValue={user?.phone || ''}
+                  value={profileForm.phone}
+                  onChange={(e) => handleProfileFormChange('phone', e.target.value)}
                 />
 
                 <div className="flex items-center space-x-2">
@@ -140,7 +222,19 @@ export function StaffProfilePage() {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button>Profil aktualisieren</Button>
+                  <Button 
+                    onClick={handleUpdateProfile}
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Wird aktualisiert...
+                      </>
+                    ) : (
+                      'Profil aktualisieren'
+                    )}
+                  </Button>
                 </div>
               </Stack>
             </Card>
@@ -244,7 +338,7 @@ export function StaffProfilePage() {
                       type="password"
                       placeholder="Neues Passwort bestätigen"
                     />
-                    <Button variant="default" size="sm" className="w-fit">
+                    <Button variant="primary" size="sm" className="w-fit">
                       Passwort aktualisieren
                     </Button>
                   </Stack>

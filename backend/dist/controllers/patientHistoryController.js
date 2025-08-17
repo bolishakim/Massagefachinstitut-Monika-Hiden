@@ -41,9 +41,13 @@ export const getPatientHistory = async (req, res) => {
         // Add search filter
         if (query.search) {
             where.OR = [
-                { generalImpression: { contains: query.search, mode: 'insensitive' } },
-                { medicalHistory: { contains: query.search, mode: 'insensitive' } },
                 { mainSubjectiveProblem: { contains: query.search, mode: 'insensitive' } },
+                { symptomHistory: { contains: query.search, mode: 'insensitive' } },
+                { previousCourseAndTherapy: { contains: query.search, mode: 'insensitive' } },
+                { patientGoals: { contains: query.search, mode: 'insensitive' } },
+                { activityStatus: { contains: query.search, mode: 'insensitive' } },
+                { trunkAndHeadParticularities: { contains: query.search, mode: 'insensitive' } },
+                { edemaTrophicsAtrophies: { contains: query.search, mode: 'insensitive' } },
                 { notes: { contains: query.search, mode: 'insensitive' } },
                 { patient: {
                         OR: [
@@ -173,6 +177,55 @@ export const getPatientHistoryById = async (req, res) => {
                 error: 'Patient history entry not found',
             });
         }
+        // Get user ID from request for audit tracking
+        const userId = req.user?.id;
+        const entryWithPatient = entry; // Type assertion to handle include relationship
+        if (userId && entryWithPatient?.patient) {
+            try {
+                const patient = entryWithPatient.patient;
+                // Log patient history access for audit compliance
+                await Promise.all([
+                    // General audit log
+                    prisma.auditLog.create({
+                        data: {
+                            userId,
+                            action: 'VIEW_DETAILED',
+                            tableName: 'PatientHistory',
+                            recordId: patient.id, // Use patient ID for tracking
+                            description: `Viewed patient history entry for: ${patient.firstName} ${patient.lastName}`,
+                            ipAddress: req.ip || null,
+                            userAgent: req.get('User-Agent') || null,
+                            newValues: {
+                                historyEntryId: entry.id,
+                                patientId: patient.id,
+                                patientName: `${patient.firstName} ${patient.lastName}`,
+                                accessType: 'patient_history_detail_view',
+                                timestamp: new Date().toISOString()
+                            }
+                        }
+                    }),
+                    // GDPR audit log
+                    prisma.gDPRAuditLog.create({
+                        data: {
+                            userId,
+                            action: 'DATA_ACCESS',
+                            dataType: 'medical_history_data',
+                            recordId: patient.id, // Use patient ID for tracking
+                            purpose: 'Staff member accessed patient medical history for treatment planning',
+                            legalBasis: 'Legitimate interest - Healthcare service provision',
+                            ipAddress: req.ip || null,
+                            userAgent: req.get('User-Agent') || null,
+                            automated: false
+                        }
+                    })
+                ]);
+                console.log(`✅ Logged patient history access for patient ${patient.id}`);
+            }
+            catch (auditError) {
+                console.error('Error logging patient history access:', auditError);
+                // Don't fail the request due to audit logging errors
+            }
+        }
         res.json({
             success: true,
             data: entry,
@@ -233,6 +286,23 @@ export const createPatientHistory = async (req, res) => {
             return res.status(401).json({
                 success: false,
                 error: 'User not authenticated',
+            });
+        }
+        // Check for recent duplicate entries to prevent accidental double submissions
+        const recentEntry = await prisma.patientHistory.findFirst({
+            where: {
+                patientId: data.patientId,
+                createdById: userId,
+                createdAt: {
+                    gte: new Date(Date.now() - 10000) // Within last 10 seconds
+                }
+            }
+        });
+        if (recentEntry) {
+            console.warn(`Duplicate patient history creation attempt blocked for patient ${data.patientId} by user ${userId}`);
+            return res.status(409).json({
+                success: false,
+                error: 'Eine Krankengeschichte für diesen Patienten wurde vor kurzem erstellt. Bitte warten Sie einen Moment bevor Sie es erneut versuchen.',
             });
         }
         const entry = await prisma.patientHistory.create({

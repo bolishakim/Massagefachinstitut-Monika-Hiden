@@ -3,7 +3,8 @@ import { getPatientHistory, getPatientHistoryById, createPatientHistory, updateP
 import { authenticateToken } from '../middleware/auth';
 import { validateRole } from '../middleware/validate';
 const router = express.Router();
-// All patient history routes require authentication
+// All patient history routes require authentication  
+// Note: Enhanced audit logging is applied globally to all /api routes
 router.use(authenticateToken);
 // GET /api/patient-history - Get all patient history entries with pagination and filters
 router.get('/', getPatientHistory);

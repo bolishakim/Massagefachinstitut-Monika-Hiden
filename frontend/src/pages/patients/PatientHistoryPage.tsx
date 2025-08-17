@@ -807,6 +807,7 @@ function PatientHistoryForm({ entry, patients, onSubmit, onCancel }: PatientHist
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const submitInProgressRef = React.useRef(false);
 
   const validateStep = (step: number): boolean => {
     const stepErrors: Record<string, string> = {};
@@ -842,19 +843,20 @@ function PatientHistoryForm({ entry, patients, onSubmit, onCancel }: PatientHist
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Prevent double submission
-    if (isSubmitting) {
+    // Prevent double submission using both state and ref
+    if (isSubmitting || submitInProgressRef.current) {
       console.warn('Form submission already in progress, ignoring duplicate submission');
       return;
     }
-    
     
     if (!validateStep(1)) {
       setCurrentStep(1);
       return;
     }
 
+    // Set both state and ref to prevent any race conditions
     setIsSubmitting(true);
+    submitInProgressRef.current = true;
     setFormError(null);
     setFormSuccess(null);
 
@@ -884,10 +886,11 @@ function PatientHistoryForm({ entry, patients, onSubmit, onCancel }: PatientHist
         const successMessage = response.message || (entry ? 'Krankengeschichte erfolgreich aktualisiert' : 'Krankengeschichte erfolgreich erstellt');
         setFormSuccess(successMessage);
         
-        // Redirect after success
+        // Redirect after success (matching patient form pattern)
         setTimeout(() => {
           onSubmit(successMessage);
         }, 1500);
+        return;
       } else {
         setFormError(response.error || 'Fehler beim Speichern der Krankengeschichte');
       }
@@ -896,6 +899,7 @@ function PatientHistoryForm({ entry, patients, onSubmit, onCancel }: PatientHist
       setFormError('Fehler beim Speichern der Krankengeschichte');
     } finally {
       setIsSubmitting(false);
+      submitInProgressRef.current = false;
     }
   };
 
@@ -1274,7 +1278,7 @@ function PatientHistoryForm({ entry, patients, onSubmit, onCancel }: PatientHist
                     className="flex items-center gap-2"
                   >
                     {isSubmitting ? (
-                      <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <Save className="h-4 w-4" />
                     )}

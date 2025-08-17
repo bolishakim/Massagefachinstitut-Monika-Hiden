@@ -55,6 +55,26 @@ export declare class GDPRService {
      */
     private static cleanupExportFiles;
     /**
+     * Hard delete patient and all related medical data (GDPR Article 17 - Right to Erasure)
+     * This overrides the 30-year medical data retention when legally requested
+     */
+    static hardDeletePatient(req: Request, patientId: string, requestedBy?: string): Promise<{
+        success: boolean;
+        error?: string;
+    }>;
+    /**
+     * Bulk hard delete patients (GDPR Article 17)
+     */
+    static bulkHardDeletePatients(req: Request, patientIds: string[], requestedBy?: string): Promise<{
+        success: boolean;
+        deletedCount: number;
+        errors: string[];
+    }>;
+    /**
+     * Export patient data for GDPR compliance (specific patient)
+     */
+    static exportPatientData(req: Request, patientId: string): Promise<DataExportResult>;
+    /**
      * Initialize default retention policies
      */
     static initializeRetentionPolicies(): Promise<void>;

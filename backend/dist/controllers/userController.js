@@ -274,9 +274,59 @@ export const deleteUser = async (req, res) => {
                 error: 'User not found',
             });
         }
-        // Delete user
-        await prisma.user.delete({
-            where: { id },
+        // Use a transaction to handle the deletion properly
+        await prisma.$transaction(async (tx) => {
+            // Log the user deletion for audit purposes before deleting
+            if (req.user) {
+                await tx.auditLog.create({
+                    data: {
+                        userId: req.user.id,
+                        action: 'DELETE',
+                        tableName: 'users',
+                        recordId: id,
+                        description: `Admin ${req.user.email} deleted user ${user.email}`,
+                        ipAddress: req.ip || req.connection.remoteAddress,
+                        userAgent: req.get('User-Agent'),
+                        oldValues: {
+                            email: user.email,
+                            firstName: user.firstName,
+                            lastName: user.lastName,
+                            role: user.role
+                        }
+                    }
+                });
+            }
+            // Delete dependent records that prevent user deletion
+            // These deletions are necessary due to foreign key constraints
+            // Delete user sessions (some may not have onDelete: Cascade)
+            await tx.userSession.deleteMany({
+                where: { userId: id }
+            });
+            // Delete consent records
+            await tx.consentRecord.deleteMany({
+                where: { userId: id }
+            });
+            // Delete data export requests
+            await tx.dataExportRequest.deleteMany({
+                where: { userId: id }
+            });
+            // Delete notifications
+            await tx.notification.deleteMany({
+                where: { userId: id }
+            });
+            // For audit compliance: Delete audit logs associated with this user
+            // Note: In a production environment, consider implementing user anonymization
+            // instead of deletion to maintain audit trail integrity
+            await tx.auditLog.deleteMany({
+                where: { userId: id }
+            });
+            await tx.gDPRAuditLog.deleteMany({
+                where: { userId: id }
+            });
+            // Finally, delete the user
+            await tx.user.delete({
+                where: { id },
+            });
         });
         res.json({
             success: true,
@@ -288,6 +338,7 @@ export const deleteUser = async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to delete user',
+            details: error instanceof Error ? error.message : 'Unknown error'
         });
     }
 };

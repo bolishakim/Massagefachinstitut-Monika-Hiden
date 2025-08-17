@@ -28,7 +28,23 @@ export declare const requestAccountDeletion: (req: Request, res: Response) => Pr
  */
 export declare const getComplianceInfo: (req: Request, res: Response) => Promise<void>;
 /**
+ * Request patient data deletion (GDPR Article 17 - Right to Erasure for Medical Data)
+ */
+export declare const requestPatientDeletion: (req: Request, res: Response) => Promise<Response<any, Record<string, any>>>;
+/**
+ * Bulk delete patients (GDPR Article 17 - Admin only)
+ */
+export declare const bulkDeletePatients: (req: Request, res: Response) => Promise<Response<any, Record<string, any>>>;
+/**
+ * Export specific patient data (GDPR Article 20 - Data Portability for Medical Data)
+ */
+export declare const exportPatientData: (req: Request, res: Response) => Promise<Response<any, Record<string, any>>>;
+/**
+ * Download patient export file
+ */
+export declare const downloadPatientExport: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+/**
  * Anonymous consent recording (for non-authenticated users)
  */
-export declare const recordAnonymousConsent: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const recordAnonymousConsent: (req: Request, res: Response) => Promise<Response<any, Record<string, any>>>;
 //# sourceMappingURL=gdprController.d.ts.map

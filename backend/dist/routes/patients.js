@@ -1,9 +1,10 @@
 import express from 'express';
-import { getPatients, getPatientById, createPatient, updatePatient, deletePatient, bulkDeletePatients, reactivatePatient, searchPatients, } from '../controllers/patientController';
+import { getPatients, getPatientById, createPatient, updatePatient, deletePatient, bulkDeletePatients, reactivatePatient, searchPatients, hardDeletePatient, bulkHardDeletePatients, } from '../controllers/patientController';
 import { authenticateToken } from '../middleware/auth';
 import { validateRole } from '../middleware/validate';
 const router = express.Router();
 // All patient routes require authentication
+// Note: Enhanced audit logging is applied globally to all /api routes
 router.use(authenticateToken);
 // GET /api/patients - Get all patients with pagination and filters
 router.get('/', getPatients);
@@ -21,5 +22,8 @@ router.post('/bulk-delete', validateRole(['ADMIN']), bulkDeletePatients);
 router.post('/:id/reactivate', validateRole(['ADMIN', 'MODERATOR']), reactivatePatient);
 // DELETE /api/patients/:id - Soft delete patient (admin/moderator only)
 router.delete('/:id', validateRole(['ADMIN', 'MODERATOR']), deletePatient);
+// GDPR Hard Delete Operations (Admin only)
+router.post('/bulk-hard-delete', validateRole(['ADMIN']), bulkHardDeletePatients);
+router.delete('/:id/hard-delete', validateRole(['ADMIN']), hardDeletePatient);
 export default router;
 //# sourceMappingURL=patients.js.map

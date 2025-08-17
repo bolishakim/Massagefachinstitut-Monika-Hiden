@@ -1,0 +1,42 @@
+{
+  "patient": {
+    "id": "c9323bdc-d798-47e3-9920-18c2639ebaff",
+    "firstName": "Merna",
+    "lastName": "Fahim",
+    "dateOfBirth": "1994-09-14T00:00:00.000Z",
+    "email": "merna.fahim94@gmail.com",
+    "phone": "+43 676 6987661",
+    "address": "St. Peter Hauptstraße 229c, 8042 Graz",
+    "socialInsuranceNumber": null,
+    "notes": "",
+    "doctorReferral": "",
+    "insuranceType": "PRIVATE_INSURANCE",
+    "createdById": "a11cfae5-94e8-4e30-952c-b5dac98393ad",
+    "modifiedById": null,
+    "isActive": true,
+    "createdAt": "2025-08-17T08:57:31.572Z",
+    "updatedAt": "2025-08-17T08:57:31.572Z",
+    "appointments": [],
+    "patientHistory": [],
+    "packages": [],
+    "payments": [],
+    "createdBy": {
+      "id": "a11cfae5-94e8-4e30-952c-b5dac98393ad",
+      "firstName": "Bolis",
+      "lastName": "Hakim"
+    }
+  },
+  "exportMetadata": {
+    "exportedAt": "2025-08-17T08:57:38.974Z",
+    "requestedBy": "a11cfae5-94e8-4e30-952c-b5dac98393ad",
+    "patientId": "c9323bdc-d798-47e3-9920-18c2639ebaff",
+    "dataTypes": [
+      "patient_profile",
+      "medical_history",
+      "appointments",
+      "packages",
+      "payments"
+    ],
+    "legalBasis": "GDPR Article 20 - Data Portability"
+  }
+}

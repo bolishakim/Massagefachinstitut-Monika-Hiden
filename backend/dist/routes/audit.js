@@ -1,8 +1,20 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth';
+import { auditController } from '../controllers/auditController';
 const router = Router();
 const prisma = new PrismaClient();
+// Enhanced audit endpoints
+router.get('/logs/enhanced', authenticateToken, auditController.getAuditLogs);
+router.get('/logs/gdpr', authenticateToken, auditController.getGDPRAuditLogs);
+router.get('/filter-options/audit', authenticateToken, auditController.getAuditLogFilterOptions);
+router.get('/filter-options/gdpr', authenticateToken, auditController.getGDPRLogFilterOptions);
+router.get('/reports/patient-access', authenticateToken, auditController.getPatientAccessReport);
+router.get('/reports/system-activity', authenticateToken, auditController.getSystemActivitySummary);
+router.get('/security-events', authenticateToken, auditController.getSecurityEvents);
+router.get('/my-logs', authenticateToken, auditController.getMyAuditLogs);
+router.get('/reports/compliance', authenticateToken, auditController.getComplianceReport);
+router.get('/dashboard', authenticateToken, auditController.getAuditDashboard);
 /**
  * Get audit logs for a specific table/record
  * GET /api/audit/logs?tableName=Patient&recordId=uuid&limit=20&page=1

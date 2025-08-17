@@ -3,7 +3,7 @@ import { GDPRService } from '../services/gdprService.js';
 import path from 'path';
 // Validation schemas
 const consentSchema = z.object({
-    consentType: z.enum(['NECESSARY', 'ANALYTICS', 'MARKETING', 'MEDICAL', 'THIRD_PARTY']),
+    consentType: z.enum(['NECESSARY', 'SYSTEM_OPTIMIZATION', 'NOTIFICATIONS', 'AUDIT_MONITORING']),
     granted: z.boolean(),
     consentString: z.string().optional(),
     expiresAt: z.string().optional().transform((val) => val ? new Date(val) : undefined),
@@ -320,6 +320,222 @@ export const getComplianceInfo = async (req, res) => {
     }
 };
 /**
+ * Request patient data deletion (GDPR Article 17 - Right to Erasure for Medical Data)
+ */
+export const requestPatientDeletion = async (req, res) => {
+    try {
+        const { patientId } = req.params;
+        const { confirmDeletion, reason } = req.body;
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated',
+            });
+        }
+        if (!patientId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Patient ID is required',
+            });
+        }
+        // Only admins or the patient themselves (if they have user account) can request deletion
+        if (user.role !== 'ADMIN' && user.role !== 'MODERATOR') {
+            return res.status(403).json({
+                success: false,
+                error: 'Administrative privileges required for patient data deletion',
+            });
+        }
+        if (!confirmDeletion) {
+            return res.status(400).json({
+                success: false,
+                error: 'Deletion confirmation required',
+            });
+        }
+        const result = await GDPRService.hardDeletePatient(req, patientId, user.id);
+        if (result.success) {
+            return res.json({
+                success: true,
+                message: 'Patient data and all associated medical records have been permanently deleted per GDPR Article 17',
+                deletionReason: reason || 'GDPR Right to Erasure request',
+            });
+        }
+        else {
+            return res.status(500).json({
+                success: false,
+                error: result.error,
+            });
+        }
+    }
+    catch (error) {
+        console.error('Error deleting patient data:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to delete patient data',
+        });
+    }
+};
+/**
+ * Bulk delete patients (GDPR Article 17 - Admin only)
+ */
+export const bulkDeletePatients = async (req, res) => {
+    try {
+        const { patientIds, confirmDeletion, reason } = req.body;
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated',
+            });
+        }
+        // Only admins can perform bulk deletions
+        if (user.role !== 'ADMIN') {
+            return res.status(403).json({
+                success: false,
+                error: 'Administrative privileges required for bulk patient deletion',
+            });
+        }
+        if (!confirmDeletion) {
+            return res.status(400).json({
+                success: false,
+                error: 'Deletion confirmation required',
+            });
+        }
+        if (!Array.isArray(patientIds) || patientIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Patient IDs array is required and cannot be empty',
+            });
+        }
+        const result = await GDPRService.bulkHardDeletePatients(req, patientIds, user.id);
+        return res.json({
+            success: result.success,
+            message: result.success
+                ? `Successfully deleted ${result.deletedCount} patients and all associated medical records`
+                : 'Some deletions failed',
+            data: {
+                deletedCount: result.deletedCount,
+                errors: result.errors,
+                deletionReason: reason || 'GDPR Bulk Right to Erasure request',
+            },
+        });
+    }
+    catch (error) {
+        console.error('Error bulk deleting patients:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to bulk delete patients',
+        });
+    }
+};
+/**
+ * Export specific patient data (GDPR Article 20 - Data Portability for Medical Data)
+ */
+export const exportPatientData = async (req, res) => {
+    try {
+        const { patientId } = req.params;
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated',
+            });
+        }
+        if (!patientId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Patient ID is required',
+            });
+        }
+        // Verify user has access to patient data
+        if (user.role !== 'ADMIN' && user.role !== 'MODERATOR' && user.role !== 'USER') {
+            return res.status(403).json({
+                success: false,
+                error: 'Insufficient privileges to export patient data',
+            });
+        }
+        const result = await GDPRService.exportPatientData(req, patientId);
+        if (result.success) {
+            return res.json({
+                success: true,
+                message: 'Patient data export completed',
+                data: {
+                    requestId: result.requestId,
+                    downloadUrl: `/api/gdpr/download-patient-export/${result.filePath}`,
+                    expiresIn: '30 days',
+                },
+            });
+        }
+        else {
+            return res.status(500).json({
+                success: false,
+                error: result.error,
+            });
+        }
+    }
+    catch (error) {
+        console.error('Error exporting patient data:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to export patient data',
+        });
+    }
+};
+/**
+ * Download patient export file
+ */
+export const downloadPatientExport = async (req, res) => {
+    try {
+        const { filename } = req.params;
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated',
+            });
+        }
+        if (!filename) {
+            return res.status(400).json({
+                success: false,
+                error: 'Filename is required',
+            });
+        }
+        // Verify the file is a patient export file
+        if (!filename.startsWith('patient-data-export-')) {
+            return res.status(403).json({
+                success: false,
+                error: 'Invalid export file',
+            });
+        }
+        // Only allow admins and moderators to download patient exports
+        if (user.role !== 'ADMIN' && user.role !== 'MODERATOR') {
+            return res.status(403).json({
+                success: false,
+                error: 'Administrative privileges required to download patient exports',
+            });
+        }
+        const filePath = path.join(process.cwd(), 'exports', filename);
+        res.download(filePath, filename, (err) => {
+            if (err) {
+                console.error('Error downloading patient export file:', err);
+                if (!res.headersSent) {
+                    return res.status(404).json({
+                        success: false,
+                        error: 'Patient export file not found or expired',
+                    });
+                }
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error downloading patient export:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to download patient export file',
+        });
+    }
+};
+/**
  * Anonymous consent recording (for non-authenticated users)
  */
 export const recordAnonymousConsent = async (req, res) => {
@@ -328,17 +544,17 @@ export const recordAnonymousConsent = async (req, res) => {
         const result = await GDPRService.recordConsent(req, null, {
             consentType: data.consentType,
             granted: data.granted,
-            consentString: data.consentString,
+            consentString: data.consentString || undefined,
             expiresAt: data.expiresAt,
         });
         if (result.success) {
-            res.json({
+            return res.json({
                 success: true,
                 message: 'Anonymous consent recorded successfully',
             });
         }
         else {
-            res.status(500).json({
+            return res.status(500).json({
                 success: false,
                 error: result.error,
             });
@@ -350,10 +566,10 @@ export const recordAnonymousConsent = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 error: 'Invalid consent data',
-                details: error.errors,
+                details: error.issues,
             });
         }
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             error: 'Failed to record anonymous consent',
         });

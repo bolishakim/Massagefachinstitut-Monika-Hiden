@@ -409,6 +409,217 @@ export class GDPRService {
         }
     }
     /**
+     * Hard delete patient and all related medical data (GDPR Article 17 - Right to Erasure)
+     * This overrides the 30-year medical data retention when legally requested
+     */
+    static async hardDeletePatient(req, patientId, requestedBy) {
+        try {
+            const patient = await prisma.patient.findUnique({
+                where: { id: patientId },
+                include: {
+                    appointments: true,
+                    patientHistory: true,
+                    packages: true,
+                    payments: true,
+                },
+            });
+            if (!patient) {
+                return { success: false, error: 'Patient not found' };
+            }
+            const userId = requestedBy || req.user?.id;
+            // Log deletion before removing data
+            await this.logGDPRAction(req, userId, GDPRAction.DATA_DELETION, 'Patient', patientId, 'erasure_request', `Patient medical data permanently deleted per GDPR Article 17. Patient: ${patient.firstName} ${patient.lastName}. All related appointments (${patient.appointments.length}), patient history (${patient.patientHistory.length}), packages (${patient.packages.length}), and payments (${patient.payments.length}) also deleted.`, false);
+            // Delete patient and all related data (CASCADE relationships handle this)
+            await prisma.$transaction(async (tx) => {
+                // The CASCADE relationships in the schema will automatically delete:
+                // - PatientHistory (onDelete: Cascade)
+                // - Appointments (onDelete: Cascade)
+                // - Packages (onDelete: Cascade) - which also cascade to PackageItems
+                // - Payments (onDelete: Cascade)
+                await tx.patient.delete({ where: { id: patientId } });
+            });
+            return { success: true };
+        }
+        catch (error) {
+            console.error('Error hard deleting patient:', error);
+            return { success: false, error: 'Failed to delete patient data' };
+        }
+    }
+    /**
+     * Bulk hard delete patients (GDPR Article 17)
+     */
+    static async bulkHardDeletePatients(req, patientIds, requestedBy) {
+        const errors = [];
+        let deletedCount = 0;
+        const userId = requestedBy || req.user?.id;
+        try {
+            // Get all patients to be deleted for logging
+            const patients = await prisma.patient.findMany({
+                where: { id: { in: patientIds } },
+                include: {
+                    appointments: true,
+                    patientHistory: true,
+                    packages: true,
+                    payments: true,
+                },
+            });
+            if (patients.length !== patientIds.length) {
+                const foundIds = patients.map(p => p.id);
+                const notFoundIds = patientIds.filter(id => !foundIds.includes(id));
+                errors.push(`Patients not found: ${notFoundIds.join(', ')}`);
+            }
+            // Delete each patient individually to ensure proper logging
+            for (const patient of patients) {
+                try {
+                    // Log deletion before removing data
+                    await this.logGDPRAction(req, userId, GDPRAction.DATA_DELETION, 'Patient', patient.id, 'erasure_request', `Bulk deletion - Patient medical data permanently deleted per GDPR Article 17. Patient: ${patient.firstName} ${patient.lastName}. Related data: ${patient.appointments.length} appointments, ${patient.patientHistory.length} history entries, ${patient.packages.length} packages, ${patient.payments.length} payments.`, false);
+                    // Delete patient and all related data
+                    await prisma.patient.delete({ where: { id: patient.id } });
+                    deletedCount++;
+                }
+                catch (error) {
+                    console.error(`Error deleting patient ${patient.id}:`, error);
+                    errors.push(`Failed to delete patient ${patient.firstName} ${patient.lastName}: ${error}`);
+                }
+            }
+            return {
+                success: errors.length === 0,
+                deletedCount,
+                errors,
+            };
+        }
+        catch (error) {
+            console.error('Error in bulk hard delete patients:', error);
+            return {
+                success: false,
+                deletedCount,
+                errors: [...errors, error instanceof Error ? error.message : 'Unknown error'],
+            };
+        }
+    }
+    /**
+     * Export patient data for GDPR compliance (specific patient)
+     */
+    static async exportPatientData(req, patientId) {
+        try {
+            // Check if patient exists
+            const patient = await prisma.patient.findUnique({
+                where: { id: patientId },
+                include: {
+                    appointments: {
+                        include: {
+                            service: true,
+                            staff: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    specialization: true,
+                                },
+                            },
+                            room: true,
+                            package: true,
+                        },
+                    },
+                    patientHistory: {
+                        include: {
+                            createdBy: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                },
+                            },
+                        },
+                    },
+                    packages: {
+                        include: {
+                            packageItems: {
+                                include: {
+                                    service: true,
+                                },
+                            },
+                            createdBy: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                },
+                            },
+                        },
+                    },
+                    payments: {
+                        include: {
+                            createdBy: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                },
+                            },
+                        },
+                    },
+                    createdBy: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                        },
+                    },
+                },
+            });
+            if (!patient) {
+                return { success: false, error: 'Patient not found' };
+            }
+            // Create export request record
+            const userId = req.user?.id || 'system';
+            const exportRequest = await prisma.dataExportRequest.create({
+                data: {
+                    userId,
+                    requestType: DataRequestType.EXPORT,
+                    requestedData: ['patient_medical_data'],
+                    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+                    notes: `Patient data export for: ${patient.firstName} ${patient.lastName} (ID: ${patientId})`,
+                },
+            });
+            // Generate export file
+            const exportDir = path.join(process.cwd(), 'exports');
+            await fs.mkdir(exportDir, { recursive: true });
+            const fileName = `patient-data-export-${patientId}-${Date.now()}.json`;
+            const filePath = path.join(exportDir, fileName);
+            const patientDataExport = {
+                patient: AuditService.cleanSensitiveData(patient),
+                exportMetadata: {
+                    exportedAt: new Date().toISOString(),
+                    requestedBy: userId,
+                    patientId,
+                    dataTypes: ['patient_profile', 'medical_history', 'appointments', 'packages', 'payments'],
+                    legalBasis: 'GDPR Article 20 - Data Portability',
+                },
+            };
+            await fs.writeFile(filePath, JSON.stringify(patientDataExport, null, 2), 'utf8');
+            // Update export request
+            await prisma.dataExportRequest.update({
+                where: { id: exportRequest.id },
+                data: {
+                    status: 'COMPLETED',
+                    filePath: fileName,
+                },
+            });
+            // Log GDPR action
+            await this.logGDPRAction(req, userId, GDPRAction.DATA_EXPORT, 'Patient', patientId, 'data_portability', `Patient medical data exported for GDPR compliance: ${patient.firstName} ${patient.lastName}`, false);
+            return {
+                success: true,
+                filePath: fileName,
+                requestId: exportRequest.id,
+            };
+        }
+        catch (error) {
+            console.error('Error exporting patient data:', error);
+            return { success: false, error: 'Failed to export patient data' };
+        }
+    }
+    /**
      * Initialize default retention policies
      */
     static async initializeRetentionPolicies() {
