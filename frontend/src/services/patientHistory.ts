@@ -35,8 +35,7 @@ export interface PatientHistoryEntry {
     startTime: string;
     endTime: string;
     service: {
-      name: string;
-      nameGerman?: string;
+      name: string; // German name
     };
     staff: {
       firstName: string;

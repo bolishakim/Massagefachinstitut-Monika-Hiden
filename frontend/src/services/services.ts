@@ -13,8 +13,7 @@ export enum ServiceCategory {
 
 export interface Service {
   id: string;
-  name: string;
-  nameGerman?: string;
+  name: string; // German name (primary language for Austrian market)
   description?: string;
   duration: number;
   price: number;
@@ -50,8 +49,7 @@ export interface ServiceFilters {
 }
 
 export interface CreateServiceData {
-  name: string;
-  nameGerman?: string;
+  name: string; // German name (primary language)
   description?: string;
   duration: number;
   price: number;

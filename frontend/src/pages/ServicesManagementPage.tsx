@@ -330,11 +330,6 @@ export function ServicesManagementPage() {
                         }`}>
                           {service.name}
                         </h3>
-                        {service.nameGerman && (
-                          <p className="text-sm text-muted-foreground">
-                            {service.nameGerman}
-                          </p>
-                        )}
                         {service.description && (
                           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                             {service.description}

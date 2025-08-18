@@ -171,8 +171,7 @@ export const getPatientHistoryById = async (req: Request, res: Response) => {
             endTime: true,
             service: {
               select: {
-                name: true,
-                nameGerman: true,
+                name: true, // German name (primary language)
               }
             },
             staff: {

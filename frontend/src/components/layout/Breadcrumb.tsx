@@ -78,17 +78,24 @@ export function useBreadcrumbs(currentPath?: string): BreadcrumbItem[] {
 
   // Route mapping for better labels
   const routeLabels: Record<string, string> = {
-    dashboard: 'Dashboard',
-    assistant: 'AI Assistant',
-    users: 'Users',
-    products: 'Products',
-    orders: 'Orders',
-    analytics: 'Analytics',
-    settings: 'Settings',
-    billing: 'Billing',
-    security: 'Security',
-    profile: 'Profile',
-    categories: 'Categories',
+    dashboard: 'Übersicht',
+    assistant: 'KI-Assistent',
+    users: 'Benutzer',
+    patients: 'Patienten',
+    packages: 'Pakete',
+    appointments: 'Termine',
+    services: 'Behandlungen',
+    staff: 'Personal',
+    rooms: 'Räume',
+    payments: 'Abrechnung',
+    analytics: 'Berichte',
+    settings: 'Einstellungen',
+    security: 'Sicherheit',
+    profile: 'Profil',
+    calendar: 'Kalender',
+    new: 'Neu',
+    edit: 'Bearbeiten',
+    history: 'Krankengeschichte',
   };
 
   let currentHref = '';

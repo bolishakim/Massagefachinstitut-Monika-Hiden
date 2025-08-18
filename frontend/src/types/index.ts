@@ -214,8 +214,7 @@ export interface PatientHistory {
 
 export interface Service {
   id: string;
-  name: string;
-  nameGerman?: string; // German name for Austrian market
+  name: string; // German name (primary language for Austrian market)
   description?: string;
   duration: number; // Duration in minutes
   price: number; // Price in euros
@@ -375,6 +374,68 @@ export interface PatientForm {
   insuranceType?: InsuranceType;
 }
 
+// Package related types
+export interface ServicePackage {
+  id: string;
+  patientId: string;
+  name: string;
+  totalPrice: number;
+  discountAmount?: number;
+  finalPrice: number;
+  status: PackageStatus;
+  createdAt: string;
+  updatedAt: string;
+  patient: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    insuranceType?: InsuranceType;
+  };
+  packageItems: PackageItem[];
+  payments: PackagePayment[];
+  totalSessions: number;
+  usedSessions: number;
+  remainingSessions: number;
+  usagePercentage: number;
+  totalPaid: number;
+  remainingBalance?: number;
+}
+
+
+export interface PackagePayment {
+  id: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  status: PaymentStatus;
+  paidAt?: string;
+  notes?: string;
+  paidSessionsCount?: number;
+  createdBy?: {
+    firstName: string;
+    lastName: string;
+  };
+}
+
+
+export interface PackageForm {
+  patientId: string;
+  name: string;
+  packageItems: {
+    serviceId: string;
+    sessionCount: number;
+  }[];
+  totalPrice: number;
+  discountAmount?: number;
+  finalPrice: number;
+  payment?: {
+    amount: number;
+    paymentMethod: PaymentMethod;
+    paidSessionsCount?: number;
+    notes?: string;
+  };
+}
+
 export interface AppointmentForm {
   patientId: string;
   packageId?: string;
@@ -397,8 +458,7 @@ export interface PackageForm {
 }
 
 export interface ServiceForm {
-  name: string;
-  nameGerman?: string;
+  name: string; // German name (primary language)
   description?: string;
   duration: number;
   price: number;

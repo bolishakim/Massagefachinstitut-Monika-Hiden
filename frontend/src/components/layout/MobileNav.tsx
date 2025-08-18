@@ -2,12 +2,11 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Home, 
-  Users, 
-  BarChart3, 
   Package, 
-  FileText, 
   Settings,
-  Plus
+  Plus,
+  UserPlus,
+  Calendar
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Badge } from '../ui/Badge';
@@ -29,33 +28,31 @@ interface MobileNavProps {
 const mobileNavItems: MobileNavItem[] = [
   {
     id: 'dashboard',
-    label: 'Home',
+    label: 'Übersicht',
     icon: Home,
     href: '/dashboard',
   },
   {
-    id: 'analytics',
-    label: 'Analytics',
-    icon: BarChart3,
-    href: '/analytics',
-    requiredRoles: ['admin', 'manager'],
+    id: 'patients',
+    label: 'Patienten',
+    icon: UserPlus,
+    href: '/patients',
   },
   {
-    id: 'products',
-    label: 'Products',
+    id: 'packages',
+    label: 'Pakete',
     icon: Package,
-    href: '/products',
+    href: '/packages',
   },
   {
-    id: 'orders',
-    label: 'Orders',
-    icon: FileText,
-    href: '/orders',
-    badge: '3',
+    id: 'calendar',
+    label: 'Kalender',
+    icon: Calendar,
+    href: '/calendar',
   },
   {
     id: 'settings',
-    label: 'Settings',
+    label: 'Einstellungen',
     icon: Settings,
     href: '/settings',
   },

@@ -13,6 +13,7 @@ import { SettingsPage } from '@/pages/Settings';
 import { AssistantPage } from '@/pages/AssistantPage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import { PatientsPage, PatientDetailPage, PatientFormPage, PatientHistoryPage } from '@/pages/patients';
+import { PackagesPage, PackageFormPage, PackageDetailPage } from '@/pages/packages';
 import { ServicesManagementPage } from '@/pages/ServicesManagementPage';
 import { RoomsManagementPage } from '@/pages/RoomsManagementPage';
 import { StaffProfilePage } from '@/pages/StaffProfilePage';
@@ -141,6 +142,51 @@ function App() {
                 <ProtectedRoute>
                   <LayoutWrapper>
                     <PatientFormPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Package Management Routes */}
+            <Route
+              path="/packages"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <PackagesPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/packages/new"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <PackageFormPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/packages/:id"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <PackageDetailPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/packages/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <PackageFormPage />
                   </LayoutWrapper>
                 </ProtectedRoute>
               }

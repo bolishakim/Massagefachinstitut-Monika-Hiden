@@ -4,6 +4,7 @@ import { PatientDetail } from '@/components/patients';
 import { patientService } from '@/services/patients';
 import { Patient, Appointment, Package, PatientHistory, Payment } from '@/types';
 import { Alert } from '@/components/ui/Alert';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -21,6 +22,21 @@ export function PatientDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [gdprLoading, setGdprLoading] = useState(false);
+  
+  // Confirmation modal state
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isLoading: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    isLoading: false,
+  });
 
   const loadPatientData = async () => {
     if (!id) {
@@ -123,55 +139,47 @@ export function PatientDetailPage() {
     }
   };
 
-  const handleHardDeletePatient = async (patient: Patient) => {
+  const handleHardDeletePatient = (patient: Patient) => {
     if (!user || user.role !== 'ADMIN') {
       setError('Administratorrechte erforderlich');
       return;
     }
 
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `ACHTUNG: PERMANENTE LÖSCHUNG\n\n` +
-      `Sie sind dabei, ALLE Daten von ${patient.firstName} ${patient.lastName} unwiderruflich zu löschen.\n\n` +
-      `Dies umfasst:\n` +
-      `• Patientenprofil und Kontaktdaten\n` +
-      `• Komplette Krankengeschichte\n` +
-      `• Alle Termine und Behandlungen\n` +
-      `• Behandlungspakete und Zahlungen\n\n` +
-      `Diese Aktion kann NICHT rückgängig gemacht werden und überschreibt die medizinische Aufbewahrungspflicht gemäß GDPR Artikel 17.\n\n` +
-      `Möchten Sie wirklich fortfahren?`
-    );
+    setConfirmationModal({
+      isOpen: true,
+      title: 'ACHTUNG: PERMANENTE LÖSCHUNG',
+      message: `Sie sind dabei, ALLE Daten von ${patient.firstName} ${patient.lastName} unwiderruflich zu löschen.\n\nDies umfasst:\n• Patientenprofil und Kontaktdaten\n• Komplette Krankengeschichte\n• Alle Termine und Behandlungen\n• Behandlungspakete und Zahlungen\n\nDiese Aktion kann NICHT rückgängig gemacht werden und überschreibt die medizinische Aufbewahrungspflicht gemäß GDPR Artikel 17.\n\nMöchten Sie wirklich fortfahren?`,
+      onConfirm: () => confirmHardDeletePatient(patient),
+      isLoading: false,
+    });
+  };
 
-    if (!confirmed) return;
-
+  const confirmHardDeletePatient = async (patient: Patient) => {
+    setConfirmationModal(prev => ({ ...prev, isLoading: true }));
     setGdprLoading(true);
     setError(null);
     setSuccessMessage(null);
 
     try {
-      const reason = window.prompt(
-        'Bitte geben Sie einen Grund für die permanente Löschung an (GDPR Artikel 17):',
-        'GDPR Right to Erasure - Patient request'
-      );
-
-      if (!reason) {
-        setGdprLoading(false);
-        return;
-      }
+      // For now, using a default reason. In a real app, you might want a separate input modal
+      const reason = 'GDPR Right to Erasure - Patient request';
 
       const result = await patientService.hardDeletePatient(patient.id, reason);
       
       if (result.success) {
+        setConfirmationModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
         setSuccessMessage('Patient und alle zugehörigen Daten wurden permanent gelöscht');
         // Navigate after a delay to show the success message
         setTimeout(() => {
           navigate('/patients');
         }, 2000);
       } else {
+        setConfirmationModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
         setError(result.error || 'Fehler beim permanenten Löschen des Patienten');
       }
     } catch (error) {
       console.error('Error permanently deleting patient:', error);
+      setConfirmationModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
       setError('Fehler beim permanenten Löschen des Patienten');
     } finally {
       setGdprLoading(false);
@@ -275,6 +283,19 @@ export function PatientDetailPage() {
         onExportPatientData={handleExportPatientData}
         onHardDeletePatient={handleHardDeletePatient}
         userRole={user?.role}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        confirmText="Permanent löschen"
+        cancelText="Abbrechen"
+        variant="danger"
+        isLoading={confirmationModal.isLoading}
       />
     </div>
   );

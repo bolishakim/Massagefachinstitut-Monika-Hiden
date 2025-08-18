@@ -28,7 +28,6 @@ interface CreateServiceModalProps {
 export function CreateServiceModal({ isOpen, onClose, onSubmit, isLoading = false }: CreateServiceModalProps) {
   const [formData, setFormData] = useState<CreateServiceData>({
     name: '',
-    nameGerman: '',
     description: '',
     duration: 30,
     price: 0,
@@ -91,7 +90,6 @@ export function CreateServiceModal({ isOpen, onClose, onSubmit, isLoading = fals
       // Reset form on success
       setFormData({
         name: '',
-        nameGerman: '',
         description: '',
         duration: 30,
         price: 0,
@@ -173,12 +171,6 @@ export function CreateServiceModal({ isOpen, onClose, onSubmit, isLoading = fals
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     error={errors.name}
                     required
-                  />
-                  <Input
-                    label="Deutscher Name (optional)"
-                    placeholder="z.B. Alternative deutsche Bezeichnung"
-                    value={formData.nameGerman || ''}
-                    onChange={(e) => handleInputChange('nameGerman', e.target.value)}
                   />
                 </div>
 

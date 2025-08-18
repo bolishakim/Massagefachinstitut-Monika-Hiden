@@ -47,12 +47,14 @@ interface SidebarProps {
 }
 
 const navigationItems: NavItem[] = [
+  // 1. Übersicht
   {
     id: 'dashboard',
     label: 'Übersicht',
     icon: Home,
     href: '/dashboard',
   },
+  // 2. Terminkalender
   {
     id: 'calendar',
     label: 'Terminkalender',
@@ -60,6 +62,7 @@ const navigationItems: NavItem[] = [
     href: '/calendar',
     badge: 'Heute',
   },
+  // 3. Patienten
   {
     id: 'patients',
     label: 'Patienten',
@@ -92,6 +95,28 @@ const navigationItems: NavItem[] = [
       },
     ],
   },
+  // 4. Pakete
+  {
+    id: 'packages',
+    label: 'Pakete',
+    icon: Package,
+    href: '/packages',
+    children: [
+      {
+        id: 'packages-list',
+        label: 'Alle Pakete',
+        icon: Package,
+        href: '/packages',
+      },
+      {
+        id: 'packages-add',
+        label: 'Neues Paket',
+        icon: Plus,
+        href: '/packages/new',
+      },
+    ],
+  },
+  // 5. Termine
   {
     id: 'appointments',
     label: 'Termine',
@@ -112,26 +137,57 @@ const navigationItems: NavItem[] = [
       },
     ],
   },
+  // 6. Zahlungen (new menu for managing payments)
   {
-    id: 'services',
-    label: 'Behandlungen',
-    icon: Stethoscope,
-    href: '/services',
+    id: 'payments-management',
+    label: 'Zahlungen',
+    icon: CreditCard,
+    href: '/payments-management',
+    requiredRoles: ['admin', 'moderator'],
     children: [
       {
-        id: 'services-list',
-        label: 'Alle Behandlungen',
-        icon: Stethoscope,
-        href: '/services',
+        id: 'payments-list',
+        label: 'Alle Zahlungen',
+        icon: CreditCard,
+        href: '/payments-management',
       },
       {
-        id: 'services-packages',
-        label: 'Pakete & Voucher',
-        icon: Package,
-        href: '/services/packages',
+        id: 'payments-pending',
+        label: 'Ausstehende Zahlungen',
+        icon: Clock,
+        href: '/payments-management/pending',
+      },
+      {
+        id: 'payments-reports',
+        label: 'Zahlungsberichte',
+        icon: BarChart3,
+        href: '/payments-management/reports',
       },
     ],
   },
+  // 7. Abrechnung
+  {
+    id: 'billing',
+    label: 'Abrechnung',
+    icon: FileText,
+    href: '/billing',
+    requiredRoles: ['admin', 'moderator'],
+    children: [
+      {
+        id: 'billing-invoices',
+        label: 'Rechnungen',
+        icon: FileText,
+        href: '/billing/invoices',
+      },
+      {
+        id: 'billing-create',
+        label: 'Rechnung erstellen',
+        icon: Plus,
+        href: '/billing/create',
+      },
+    ],
+  },
+  // 8. Personal
   {
     id: 'staff',
     label: 'Personal',
@@ -167,27 +223,7 @@ const navigationItems: NavItem[] = [
       },
     ],
   },
-  {
-    id: 'rooms',
-    label: 'Behandlungsräume',
-    icon: Building2,
-    href: '/rooms',
-    requiredRoles: ['admin', 'moderator'],
-  },
-  {
-    id: 'payments',
-    label: 'Abrechnung',
-    icon: CreditCard,
-    href: '/payments',
-    requiredRoles: ['admin', 'moderator'],
-  },
-  {
-    id: 'analytics',
-    label: 'Berichte',
-    icon: BarChart3,
-    href: '/analytics',
-    requiredRoles: ['admin', 'moderator'],
-  },
+  // 9. KI-Assistent
   {
     id: 'assistant',
     label: 'KI-Assistent',
@@ -195,6 +231,7 @@ const navigationItems: NavItem[] = [
     href: '/assistant',
     badge: 'KI',
   },
+  // 10. Systemverwaltung
   {
     id: 'settings',
     label: 'Systemverwaltung',

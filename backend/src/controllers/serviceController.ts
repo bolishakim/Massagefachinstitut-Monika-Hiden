@@ -7,8 +7,7 @@ const prisma = new PrismaClient();
 
 // Validation schemas
 const createServiceSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  nameGerman: z.string().optional(),
+  name: z.string().min(1, 'Name is required'), // German name (primary language)
   description: z.string().optional(),
   duration: z.number().min(1, 'Duration must be at least 1 minute'),
   price: z.number().min(0, 'Price must be positive'),
@@ -56,7 +55,6 @@ export const getServices = async (req: Request, res: Response) => {
     if (query.search) {
       where.OR = [
         { name: { contains: query.search, mode: 'insensitive' } },
-        { nameGerman: { contains: query.search, mode: 'insensitive' } },
         { description: { contains: query.search, mode: 'insensitive' } },
       ];
     }
@@ -692,14 +690,12 @@ export const searchServices = async (req: Request, res: Response) => {
         isActive: true,
         OR: [
           { name: { contains: q, mode: 'insensitive' } },
-          { nameGerman: { contains: q, mode: 'insensitive' } },
           { description: { contains: q, mode: 'insensitive' } },
         ],
       },
       select: {
         id: true,
-        name: true,
-        nameGerman: true,
+        name: true, // German name (primary language)
         duration: true,
         price: true,
         category: true,

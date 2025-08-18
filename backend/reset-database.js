@@ -6,7 +6,9 @@
  * This script:
  * 1. Clears all data from the database
  * 2. Creates 3 users with different roles (ADMIN, MODERATOR, USER)
- * 3. Initializes GDPR retention policies
+ * 3. Creates 24 comprehensive medical services
+ * 4. Creates 5 treatment rooms (physiotherapy, massage, infrared chair)
+ * 5. Initializes GDPR retention policies
  * 
  * Usage: node reset-database.js
  */
@@ -155,6 +157,280 @@ async function createUsers() {
   return createdUsers;
 }
 
+async function createServices(adminUserId) {
+  log('\n🏥 Creating medical services...', colors.magenta);
+  
+  const services = [
+    // Basic Massage Services
+    {
+      name: 'Teilmassage 30 min',
+      description: 'Gezielte Massage bestimmter Körperbereiche zur Entspannung und Schmerzlinderung',
+      category: 'MASSAGE',
+      price: 30.00,
+      duration: 30
+    },
+    {
+      name: 'Heilmassage 30 min',
+      description: 'Therapeutische Massage zur medizinischen Behandlung und Rehabilitation',
+      category: 'HEILMASSAGE',
+      price: 30.00,
+      duration: 30
+    },
+    {
+      name: 'Teilmassage 45 min',
+      description: 'Erweiterte Teilmassage für tiefere Entspannung und Behandlung',
+      category: 'MASSAGE',
+      price: 43.00,
+      duration: 45
+    },
+    {
+      name: 'Heilmassage 45 min',
+      description: 'Erweiterte therapeutische Massage für umfassende medizinische Behandlung',
+      category: 'HEILMASSAGE',
+      price: 43.00,
+      duration: 45
+    },
+    {
+      name: 'Teilmassage Kinder/Schüler 30 min',
+      description: 'Sanfte Massage speziell für Kinder und Schüler zu reduzierten Preisen',
+      category: 'MASSAGE',
+      price: 24.00,
+      duration: 30
+    },
+    {
+      name: 'Heilmassage Kinder/Schüler 30 min',
+      description: 'Therapeutische Massage für Kinder und Schüler zu reduzierten Preisen',
+      category: 'HEILMASSAGE',
+      price: 24.00,
+      duration: 30
+    },
+    {
+      name: 'Ganzkörpermassage 60 min',
+      description: 'Komplette Ganzkörpermassage für totale Entspannung und Wohlbefinden',
+      category: 'MASSAGE',
+      price: 58.00,
+      duration: 60
+    },
+    
+    // Specialized Massage Techniques
+    {
+      name: 'Fußreflexzonenmassage 30 min',
+      description: 'Therapeutische Fußmassage mit Fokus auf Reflexzonen zur Heilungsförderung',
+      category: 'PHYSIOTHERAPY',
+      price: 35.00,
+      duration: 30
+    },
+    {
+      name: 'Segmentmassage 30 min',
+      description: 'Spezielle Massagetechnik mit Fokus auf Körpersegmente und Nervenbahnen',
+      category: 'HEILMASSAGE',
+      price: 35.00,
+      duration: 30
+    },
+    {
+      name: 'Bindegewebsmassage 30 min',
+      description: 'Tiefengewebsmassage mit Fokus auf Bindegewebe und Faszien',
+      category: 'HEILMASSAGE',
+      price: 35.00,
+      duration: 30
+    },
+    {
+      name: 'Akupunktmassage 30 min',
+      description: 'Massagetherapie kombiniert mit Akupunkturprinzipien und Druckpunkten',
+      category: 'HEILMASSAGE',
+      price: 35.00,
+      duration: 30
+    },
+    {
+      name: 'Ohrakupunktmassage 30 min',
+      description: 'Spezialisierte Ohrmassage mit Akupunkturprinzipien für ganzheitliche Heilung',
+      category: 'HEILMASSAGE',
+      price: 35.00,
+      duration: 30
+    },
+    
+    // Lymphatic Drainage Services
+    {
+      name: 'Lymphdrainage 30 min',
+      description: 'Sanfte Massagetechnik zur Stimulation des Lymphsystems und Schwellungsreduktion',
+      category: 'HEILMASSAGE',
+      price: 35.00,
+      duration: 30
+    },
+    {
+      name: 'Lymphdrainage 45 min',
+      description: 'Erweiterte Lymphdrainage für umfassende Entgiftung und Heilung',
+      category: 'HEILMASSAGE',
+      price: 52.50,
+      duration: 45
+    },
+    {
+      name: 'Lymphdrainage 60 min',
+      description: 'Vollständige Lymphdrainage-Sitzung für maximalen therapeutischen Nutzen',
+      category: 'HEILMASSAGE',
+      price: 63.00,
+      duration: 60
+    },
+    
+    // Specialized Treatments
+    {
+      name: 'Dorn-Breuss Behandlung 60 min',
+      description: 'Ganzheitliche Wirbelsäulentherapie kombiniert Dorn-Methode und Breuss-Massage',
+      category: 'PHYSIOTHERAPY',
+      price: 65.00,
+      duration: 60
+    },
+    {
+      name: 'Dorn-Breuss Behandlung 90 min',
+      description: 'Erweiterte Dorn-Breuss Behandlung für umfassende Wirbelsäulen- und Muskeltherapie',
+      category: 'PHYSIOTHERAPY',
+      price: 90.00,
+      duration: 90
+    },
+    
+    // Additional Wellness Services
+    {
+      name: 'Moorpackungen (2 Stk.) 30 min',
+      description: 'Natürliche Moortherapie-Packungen für Tiefenwärmebehandlung und Muskelentspannung',
+      category: 'INFRARED_CHAIR',
+      price: 14.00,
+      duration: 30
+    },
+    {
+      name: 'SEN-RELAX PLUS Tiefenwärmeliege 30 min',
+      description: 'Fortgeschrittene Tiefenwärmetherapie mit spezieller Wärmebett-Technologie',
+      category: 'INFRARED_CHAIR',
+      price: 14.00,
+      duration: 30
+    },
+    
+    // Combination Packages
+    {
+      name: 'Kombi: SEN-RELAX PLUS Tiefenwärmeliege 30 min und Teilmassage 30 min',
+      description: 'Kombinationsbehandlung: 30 min Tiefenwärmetherapie gefolgt von 30 min Teilmassage',
+      category: 'COMBINATION',
+      price: 44.00,
+      duration: 60
+    },
+    {
+      name: '10 Teilmassage + 1 Teilmassage gratis',
+      description: 'Paketangebot: Kaufen Sie 10 Teilmassagen und erhalten Sie 1 zusätzliche Massage gratis',
+      category: 'VOUCHER',
+      price: 300.00,
+      duration: 30
+    },
+    
+    // Additional Physiotherapy Services
+    {
+      name: 'Physiotherapie 30 min',
+      description: 'Physiotherapie-Behandlungssitzung zur Rehabilitation und Mobilitätsverbesserung',
+      category: 'PHYSIOTHERAPY',
+      price: 48.00,
+      duration: 30
+    },
+    {
+      name: 'Physiotherapie 45 min',
+      description: 'Erweiterte Physiotherapie-Sitzung für umfassende Behandlung und Bewegungstherapie',
+      category: 'PHYSIOTHERAPY',
+      price: 72.00,
+      duration: 45
+    },
+    {
+      name: 'Physiotherapie 60 min',
+      description: 'Umfassende Physiotherapie-Sitzung für vollständige Rehabilitation und therapeutische Übungen',
+      category: 'PHYSIOTHERAPY',
+      price: 96.00,
+      duration: 60
+    }
+  ];
+  
+  let createdCount = 0;
+  for (const service of services) {
+    try {
+      await prisma.service.create({
+        data: {
+          name: service.name,
+          description: service.description,
+          category: service.category,
+          price: service.price,
+          duration: service.duration,
+          createdById: adminUserId,
+          isActive: true
+        }
+      });
+      
+      createdCount++;
+      log(`   ✅ Created: ${service.name} (${service.duration}min - €${service.price})`, colors.green);
+      
+    } catch (error) {
+      log(`   ❌ Failed to create service ${service.name}: ${error.message}`, colors.red);
+    }
+  }
+  
+  log(`\n✅ Created ${createdCount} medical services`, colors.green);
+}
+
+async function createRooms(adminUserId) {
+  log('\n🏢 Erstelle Behandlungsräume...', colors.cyan);
+  
+  const rooms = [
+    {
+      name: 'Raum 1',
+      description: 'Physiotherapie Behandlungsraum - Ausgestattet für Rehabilitation und therapeutische Übungen',
+      features: ['Physiotherapie-Geräte', 'Übungsmatten', 'Sprossenwand', 'Gleichgewichtstraining', 'Klimaanlage'],
+      capacity: 1
+    },
+    {
+      name: 'Raum 2', 
+      description: 'Massage Behandlungsraum - Komfortable Umgebung für Massagetherapie',
+      features: ['Massageliege', 'Musikanlage', 'Stimmungsbeleuchtung', 'Klimaregelung', 'Aufbewahrungsschrank'],
+      capacity: 1
+    },
+    {
+      name: 'Raum 3',
+      description: 'Massage Behandlungsraum - Komfortable Umgebung für Massagetherapie', 
+      features: ['Massageliege', 'Musikanlage', 'Stimmungsbeleuchtung', 'Klimaregelung', 'Aufbewahrungsschrank'],
+      capacity: 1
+    },
+    {
+      name: 'Raum 4',
+      description: 'Massage Behandlungsraum - Komfortable Umgebung für Massagetherapie',
+      features: ['Massageliege', 'Musikanlage', 'Stimmungsbeleuchtung', 'Klimaregelung', 'Aufbewahrungsschrank'], 
+      capacity: 1
+    },
+    {
+      name: 'Raum 5',
+      description: 'Infrarot-Stuhl Raum - Spezialisierter Bereich für Wärmetherapie',
+      features: ['Infrarot-Stuhl', 'Klimaregelung', 'Lesematerial', 'Sichtschutz', 'Timer-Steuerung'],
+      capacity: 1
+    }
+  ];
+  
+  let createdCount = 0;
+  for (const room of rooms) {
+    try {
+      await prisma.room.create({
+        data: {
+          name: room.name,
+          description: room.description,
+          features: room.features,
+          capacity: room.capacity,
+          createdById: adminUserId,
+          isActive: true
+        }
+      });
+      
+      createdCount++;
+      log(`   ✅ Created: ${room.name} - ${room.description}`, colors.green);
+      
+    } catch (error) {
+      log(`   ❌ Failed to create room ${room.name}: ${error.message}`, colors.red);
+    }
+  }
+  
+  log(`\n✅ ${createdCount} Behandlungsräume erstellt`, colors.green);
+}
+
 async function createDataRetentionPolicies() {
   log('\n📋 Creating GDPR data retention policies...', colors.cyan);
   
@@ -226,6 +502,19 @@ async function displaySummary(users) {
     log(`      Description: ${user.description}`, colors.cyan);
   });
   
+  log('\n🏥 Medical Services:', colors.blue);
+  log('   ✅ 24 comprehensive medical services created', colors.green);
+  log('   ✅ Massage services (€24-€300)', colors.green);
+  log('   ✅ Medical massage & lymphatic drainage (€30-€63)', colors.green);
+  log('   ✅ Physiotherapy sessions (€48-€96)', colors.green);
+  log('   ✅ Specialized treatments (€14-€90)', colors.green);
+  
+  log('\n🏢 Behandlungsräume:', colors.blue);
+  log('   ✅ 5 Behandlungsräume erstellt', colors.green);
+  log('   ✅ Raum 1: Physiotherapie Behandlungsraum', colors.green);
+  log('   ✅ Räume 2-4: Massage Behandlungsräume', colors.green);
+  log('   ✅ Raum 5: Infrarot-Stuhl Raum', colors.green);
+  
   log('\n📋 GDPR Retention Policies:', colors.blue);
   log('   ✅ Patient records: 30 years (Austrian Medical Practice Act)', colors.green);
   log('   ✅ Staff records: 7 years (Employment Law)', colors.green);
@@ -255,6 +544,12 @@ async function main() {
     
     // Create users
     const users = await createUsers();
+    
+    // Create medical services (pass admin user for createdById)
+    await createServices(users[0].id);
+    
+    // Create treatment rooms (pass admin user for createdById)
+    await createRooms(users[0].id);
     
     // Create GDPR policies
     await createDataRetentionPolicies();

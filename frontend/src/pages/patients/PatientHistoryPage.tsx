@@ -373,7 +373,7 @@ export function PatientHistoryPage() {
                     </div>
                     {entry.appointment && (
                       <div className="text-xs text-muted-foreground mt-1">
-                        {entry.appointment.service.nameGerman || entry.appointment.service.name}
+                        {entry.appointment.service.name}
                       </div>
                     )}
                     {entry.patient.dateOfBirth && (
@@ -638,7 +638,7 @@ export function PatientHistoryPage() {
                     <>
                       <div>
                         <h3 className="font-medium text-sm text-muted-foreground mb-1">Behandlung</h3>
-                        <p>{viewingEntry.appointment.service.nameGerman || viewingEntry.appointment.service.name}</p>
+                        <p>{viewingEntry.appointment.service.name}</p>
                       </div>
                       <div>
                         <h3 className="font-medium text-sm text-muted-foreground mb-1">Termin</h3>
