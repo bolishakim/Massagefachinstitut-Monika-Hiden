@@ -1,7 +1,7 @@
 # Database Reset Script
 
 ## Overview
-This script completely resets the medical center database and creates a clean setup with 3 users, 25 comprehensive medical services, and GDPR compliance policies.
+This script completely resets the medical center database and creates a clean setup with 8 staff users (username-based authentication), 24 comprehensive medical services, and GDPR compliance policies.
 
 ## Usage
 
@@ -22,17 +22,28 @@ tsx reset-database.js
 - Respects foreign key constraints
 - Removes all existing data safely
 
-### 👥 **User Creation**
-Creates 3 users with different roles:
+### 👥 **Staff User Creation**
+Creates 8 real staff users with username-based authentication:
 
-| Role | Name | Email | Password | Specialization |
-|------|------|-------|----------|----------------|
-| **ADMIN** | Dr. Admin Manager | admin@medicalcenter.com | `Admin123!` | Medical Massage |
-| **MODERATOR** | Sarah Wilson | supervisor@medicalcenter.com | `Supervisor123!` | Physiotherapy |
-| **USER** | Emma Johnson | staff@medicalcenter.com | `Staff123!` | Massage |
+| Role | Name | Username | Password | Specialization |
+|------|------|----------|----------|----------------|
+| **ADMIN** | Monika Hiden | `monika.hiden` | `password123` | Medical Massage |
+| **MODERATOR** | Hedra Ramandious | `hedra.ramandious` | `password123` | Physiotherapy |
+| **USER** | Stefan Konrad | `stefan.konrad` | `password123` | Massage |
+| **USER** | Simon Freisitzer | `simon.freisitzer` | `password123` | Massage |
+| **USER** | Barbara Eckerstorfer | `barbara.eckerstorfer` | `password123` | Massage |
+| **USER** | Stephan Hiden | `stephan.hiden` | `password123` | Massage |
+| **USER** | Katharina Marchold | `katharina.marchold` | `password123` | Massage |
+| **USER** | Flavius Null | `flavius.null` | `password123` | Massage |
+
+**Authentication Features:**
+- ✅ **Username-based login** - Staff login with `firstname.lastname` format
+- ✅ **No email required** - Staff don't need email addresses yet
+- ✅ **Consistent passwords** - All staff use `password123` for easy access
+- ✅ **Role-based access** - 1 Admin, 1 Moderator, 6 regular staff members
 
 ### 🏥 **Medical Services Setup**
-Creates 25 comprehensive medical services with bilingual support (German/English):
+Creates 24 comprehensive medical services with bilingual support (German/English):
 
 | Category | Services | Price Range | Duration |
 |----------|----------|-------------|----------|
@@ -64,11 +75,13 @@ Creates retention policies for:
    npm run dev
    ```
 
-2. **Login to the frontend** with any of the created user credentials
+2. **Login to the frontend** with username and password:
+   - **Username**: Any staff member's `firstname.lastname` (e.g., `monika.hiden`)
+   - **Password**: `password123` (for all staff)
 
 3. **Test the application**:
    - Create test patients
-   - **Create service packages** using the 25 pre-loaded services
+   - **Create service packages** using the 24 pre-loaded services
    - **Book appointments** with different massage and physiotherapy services
    - Access patient records
    - **Test the package management system** with real Austrian pricing
@@ -114,9 +127,30 @@ All services include:
 - Appropriate medical categories
 - Realistic Austrian healthcare pricing
 
+## Login Instructions
+
+### Staff Authentication
+All staff members can login using the new username-based system:
+
+1. **Navigate to the login page**
+2. **Enter Username**: Use `firstname.lastname` format
+   - Examples: `monika.hiden`, `stefan.konrad`, `hedra.ramandious`
+3. **Enter Password**: `password123` (same for all staff)
+4. **Access Levels**:
+   - **Monika Hiden (ADMIN)**: Full system access, user management, settings
+   - **Hedra Ramandious (MODERATOR)**: Staff management, scheduling, reports
+   - **All other staff (USER)**: Patient care, basic functionality, own profile
+
+### Authentication Benefits
+- ✅ **No email required** - Staff don't need email addresses yet
+- ✅ **Simple format** - Easy to remember firstname.lastname pattern
+- ✅ **Secure but accessible** - Consistent password for development/testing
+- ✅ **Role-based permissions** - Different access levels based on staff role
+
 ## Files Created/Modified
 
-- `reset-database.js` - The main reset script with services integration
+- `reset-database.js` - The main reset script with 8 staff users and username authentication
 - `massage_services.sql` - Original SQL file with all services (reference only)
 - `package.json` - Added `db:reset` npm script
-- Database tables - All cleared and repopulated with users, services, and policies
+- Database tables - All cleared and repopulated with staff users, services, and policies
+- Authentication system - Updated to support username-based login

@@ -2,7 +2,8 @@
 
 export interface User {
   id: string;
-  email: string;
+  email?: string;      // Made optional since staff might not have emails
+  username?: string;   // Added username support
   firstName: string;
   lastName: string;
   role: Role;
@@ -53,7 +54,8 @@ export interface PaginatedResponse<T> {
 
 // Form types
 export interface LoginForm {
-  email: string;
+  email?: string;       // Made optional to support username login
+  username?: string;    // Added username support
   password: string;
 }
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowRight, User } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -19,6 +19,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
   const { login, loading, refreshUser } = useAuth();
   const [formData, setFormData] = useState<LoginFormType>({
     email: '',
+    username: '',
     password: '',
   });
   const [errors, setErrors] = useState<Partial<LoginFormType>>({});
@@ -33,10 +34,13 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
   const validateForm = (): boolean => {
     const newErrors: Partial<LoginFormType> = {};
 
-    if (!formData.email) {
-      newErrors.email = 'E-Mail ist erforderlich';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    // Require either email or username
+    if (!formData.email && !formData.username) {
+      newErrors.email = 'E-Mail oder Benutzername ist erforderlich';
+    } else if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Bitte geben Sie eine gültige E-Mail-Adresse ein';
+    } else if (formData.username && !/^[a-zA-Z0-9._-]+$/.test(formData.username)) {
+      newErrors.username = 'Benutzername darf nur Buchstaben, Zahlen, Punkte, Unterstriche und Bindestriche enthalten';
     }
 
     if (!formData.password) {
@@ -146,17 +150,32 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
-            <Mail className="absolute left-3 top-10 h-4 w-4 text-muted-foreground" />
+            <User className="absolute left-3 top-10 h-4 w-4 text-muted-foreground" />
             <Input
-              label="E-Mail"
-              name="email"
-              type="email"
-              placeholder="Geben Sie Ihre E-Mail-Adresse ein"
-              value={formData.email}
-              onChange={handleChange}
-              error={errors.email}
+              label="E-Mail oder Benutzername"
+              name={formData.email ? "email" : "username"}
+              type="text"
+              placeholder="E-Mail-Adresse oder Benutzername (z.B. monika.hiden)"
+              value={formData.email || formData.username || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Determine if it's an email or username based on @ symbol
+                if (value.includes('@')) {
+                  setFormData(prev => ({ ...prev, email: value, username: '' }));
+                } else {
+                  setFormData(prev => ({ ...prev, username: value, email: '' }));
+                }
+                // Clear errors
+                if (errors.email || errors.username) {
+                  setErrors(prev => ({ ...prev, email: '', username: '' }));
+                }
+                if (submitError) {
+                  setSubmitError('');
+                }
+              }}
+              error={errors.email || errors.username}
               className="pl-10"
-              autoComplete="email"
+              autoComplete="username"
             />
           </div>
 

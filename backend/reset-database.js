@@ -5,7 +5,7 @@
  * 
  * This script:
  * 1. Clears all data from the database
- * 2. Creates 3 users with different roles (ADMIN, MODERATOR, USER)
+ * 2. Creates 8 staff users with username-based authentication (1 ADMIN, 1 MODERATOR, 6 USER)
  * 3. Creates 24 comprehensive medical services
  * 4. Creates 5 treatment rooms (physiotherapy, massage, infrared chair)
  * 5. Initializes GDPR retention policies
@@ -88,35 +88,86 @@ async function createUsers() {
   log('\n👥 Creating users...', colors.blue);
   
   const userData = [
+    // Staff Users with username-based authentication
     {
-      email: 'admin@medicalcenter.com',
-      password: 'Admin123!',
-      firstName: 'Dr. Admin',
-      lastName: 'Manager',
-      role: Role.ADMIN,
-      specialization: 'MEDICAL_MASSAGE',
-      phone: '+43 1 234 5601',
-      description: 'System Administrator - Full access to all features'
-    },
-    {
-      email: 'supervisor@medicalcenter.com', 
-      password: 'Supervisor123!',
-      firstName: 'Sarah',
-      lastName: 'Wilson',
-      role: Role.MODERATOR,
-      specialization: 'PHYSIOTHERAPY',
-      phone: '+43 1 234 5602',
-      description: 'Staff Supervisor - Manages staff and patient records'
-    },
-    {
-      email: 'staff@medicalcenter.com',
-      password: 'Staff123!',
-      firstName: 'Emma',
-      lastName: 'Johnson', 
+      username: 'stefan.konrad',
+      password: 'password123',
+      firstName: 'Stefan',
+      lastName: 'Konrad',
       role: Role.USER,
       specialization: 'MASSAGE',
-      phone: '+43 1 234 5603',
-      description: 'Staff Member - Basic patient management access'
+      phone: '+43 676 1234001',
+      description: 'Massage Therapist - Specializing in therapeutic and relaxation massage'
+    },
+    {
+      username: 'simon.freisitzer',
+      password: 'password123',
+      firstName: 'Simon',
+      lastName: 'Freisitzer',
+      role: Role.USER,
+      specialization: 'MASSAGE',
+      phone: '+43 676 1234002',
+      description: 'Massage Therapist - Expert in sports and deep tissue massage'
+    },
+    {
+      username: 'monika.hiden',
+      password: 'password123',
+      firstName: 'Monika',
+      lastName: 'Hiden',
+      role: Role.ADMIN,
+      specialization: 'MEDICAL_MASSAGE',
+      phone: '+43 676 1234003',
+      description: 'Administrator - Medical massage specialist with full system access'
+    },
+    {
+      username: 'barbara.eckerstorfer',
+      password: 'password123',
+      firstName: 'Barbara',
+      lastName: 'Eckerstorfer',
+      role: Role.USER,
+      specialization: 'MASSAGE',
+      phone: '+43 676 1234004',
+      description: 'Massage Therapist - Holistic and wellness massage specialist'
+    },
+    {
+      username: 'stephan.hiden',
+      password: 'password123',
+      firstName: 'Stephan',
+      lastName: 'Hiden',
+      role: Role.USER,
+      specialization: 'MASSAGE',
+      phone: '+43 676 1234005',
+      description: 'Massage Therapist - Traditional and therapeutic massage techniques'
+    },
+    {
+      username: 'hedra.ramandious',
+      password: 'password123',
+      firstName: 'Hedra',
+      lastName: 'Ramandious',
+      role: Role.MODERATOR,
+      specialization: 'PHYSIOTHERAPY',
+      phone: '+43 676 1234006',
+      description: 'Physiotherapist & Supervisor - Staff management and physiotherapy treatments'
+    },
+    {
+      username: 'katharina.marchold',
+      password: 'password123',
+      firstName: 'Katharina',
+      lastName: 'Marchold',
+      role: Role.USER,
+      specialization: 'MASSAGE',
+      phone: '+43 676 1234007',
+      description: 'Massage Therapist - Lymphatic drainage and medical massage'
+    },
+    {
+      username: 'flavius.null',
+      password: 'password123',
+      firstName: 'Flavius',
+      lastName: 'Null',
+      role: Role.USER,
+      specialization: 'MASSAGE',
+      phone: '+43 676 1234008',
+      description: 'Massage Therapist - Sports massage and injury rehabilitation'
     }
   ];
   
@@ -128,7 +179,7 @@ async function createUsers() {
       
       const createdUser = await prisma.user.create({
         data: {
-          email: user.email,
+          username: user.username,
           password: hashedPassword,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -146,10 +197,10 @@ async function createUsers() {
         description: user.description
       });
       
-      log(`   ✅ Created ${user.role}: ${user.firstName} ${user.lastName} (${user.email})`, colors.green);
+      log(`   ✅ Created ${user.role}: ${user.firstName} ${user.lastName} (@${user.username})`, colors.green);
       
     } catch (error) {
-      log(`   ❌ Failed to create user ${user.email}: ${error.message}`, colors.red);
+      log(`   ❌ Failed to create user ${user.username}: ${error.message}`, colors.red);
       throw error;
     }
   }
@@ -495,7 +546,7 @@ async function displaySummary(users) {
   users.forEach(user => {
     log(`\n   🏥 ${user.role}:`, colors.yellow);
     log(`      Name: ${user.firstName} ${user.lastName}`, colors.white);
-    log(`      Email: ${user.email}`, colors.white);
+    log(`      Username: ${user.username}`, colors.white);
     log(`      Password: ${user.plainPassword}`, colors.white);
     log(`      Phone: ${user.phone}`, colors.white);
     log(`      Specialization: ${user.specialization}`, colors.white);
@@ -523,9 +574,10 @@ async function displaySummary(users) {
   
   log('\n🔗 Next Steps:', colors.magenta);
   log('   1. Start the backend server: npm run dev', colors.white);
-  log('   2. Login with any of the credentials above', colors.white);
-  log('   3. Test the audit logging features', colors.white);
-  log('   4. Create test patients to see audit reports', colors.white);
+  log('   2. Login with username (e.g., monika.hiden) and password: password123', colors.white);
+  log('   3. All staff use firstname.lastname format for login', colors.white);
+  log('   4. Test the audit logging features', colors.white);
+  log('   5. Create test patients to see audit reports', colors.white);
   
   log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', colors.white);
 }

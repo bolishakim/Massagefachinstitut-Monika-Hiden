@@ -12,7 +12,8 @@ datasource db {
 
 model User {
   id        String   @id @default(uuid())
-  email     String   @unique
+  email     String?  @unique // Made optional since staff might not have emails
+  username  String?  @unique // Added username field for staff login
   password  String
   firstName String
   lastName  String
