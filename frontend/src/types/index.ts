@@ -333,9 +333,11 @@ export enum PaymentMethod {
 }
 
 export enum PaymentStatus {
-  PENDING = 'PENDING',
-  COMPLETED = 'COMPLETED',
-  REFUNDED = 'REFUNDED',
+  NONE = 'NONE',                     // No payment made ("Später zahlen")
+  PARTIALLY_PAID = 'PARTIALLY_PAID', // Partial payment made ("Teilzahlung") 
+  COMPLETED = 'COMPLETED',           // Full payment made ("Vollzahlung")
+  PENDING = 'PENDING',               // Payment initiated but not confirmed
+  REFUNDED = 'REFUNDED',             // Payment was refunded
 }
 
 export interface StaffSchedule {
@@ -385,6 +387,7 @@ export interface ServicePackage {
   discountAmount?: number;
   finalPrice: number;
   status: PackageStatus;
+  paymentStatus: PaymentStatus;
   createdAt: string;
   updatedAt: string;
   patient: {

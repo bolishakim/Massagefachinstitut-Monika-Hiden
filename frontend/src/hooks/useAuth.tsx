@@ -25,15 +25,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const isAuthenticated = !!user && authService.isAuthenticated();
 
-  // Load user on mount
+  // Load user on mount with development mode protection
   useEffect(() => {
-    initializeAuth();
-  }, []);
+    let isMounted = true;
+    
+    const initAuth = async () => {
+      if (!isMounted) return; // Prevent race conditions during hot reload
+      await initializeAuth();
+    };
+    
+    initAuth();
+    
+    // Cleanup function to prevent effects after component unmount
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array to run only once
 
   const initializeAuth = async () => {
     try {
-      if (authService.isAuthenticated()) {
+      // Check if we have a token before trying to load user
+      const token = authService.getAccessToken();
+      if (token && authService.isAuthenticated()) {
         await loadUser();
+      } else {
+        // No token or invalid token, just set loading to false
+        setUser(null);
+        if (token) {
+          // Clear invalid token
+          authService.clearAuth();
+        }
       }
     } catch (error) {
       console.error('Auth initialization error:', error);

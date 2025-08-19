@@ -28,7 +28,7 @@ import { Select } from '../ui/Select';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Avatar } from '../ui/Avatar';
-import { ServicePackage, PackageStatus, PaginatedResponse, InsuranceType } from '@/types';
+import { ServicePackage, PackageStatus, PaymentStatus, PaginatedResponse, InsuranceType } from '@/types';
 import { clsx } from 'clsx';
 
 interface PackageListProps {
@@ -437,7 +437,7 @@ export function PackageList({
                           <Edit className="h-4 w-4" />
                         </Button>
                       )}
-                      {onAddPayment && pkg.status === 'ACTIVE' && pkg.totalPaid < pkg.finalPrice && (
+                      {onAddPayment && pkg.status === 'ACTIVE' && pkg.totalPaid > 0 && pkg.totalPaid < pkg.finalPrice && (
                         <Button variant="outline" size="sm" onClick={() => onAddPayment(pkg)}>
                           <CreditCard className="h-4 w-4" />
                         </Button>

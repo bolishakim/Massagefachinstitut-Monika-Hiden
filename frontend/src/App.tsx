@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useBreadcrumbs } from '@/components/layout/Breadcrumb';
 import { CookieConsentBanner } from '@/components/gdpr/CookieConsentBanner';
+import { SessionTimeoutProvider } from '@/components/auth/SessionTimeoutProvider';
 import { AuthPage } from '@/pages/AuthPage';
 import { DashboardPage } from '@/pages/Dashboard';
 import { UserManagementPage } from '@/pages/UserManagementPage';
@@ -52,7 +53,11 @@ function App() {
     <ThemeProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
-          <Routes>
+          <SessionTimeoutProvider
+            timeoutDuration={15 * 60 * 1000} // 15 minutes
+            warningDuration={2 * 60 * 1000}  // 2 minutes warning
+          >
+            <Routes>
             {/* Public routes */}
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
@@ -374,10 +379,11 @@ function App() {
             
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-          
-          {/* Global components */}
-          <CookieConsentBanner />
+            </Routes>
+            
+            {/* Global components */}
+            <CookieConsentBanner />
+          </SessionTimeoutProvider>
         </AuthProvider>
       </Router>
     </ThemeProvider>

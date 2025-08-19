@@ -217,7 +217,8 @@ export const login = async (req: Request, res: Response) => {
       requiresMFA: false,
       data: {
         user: userWithoutPassword,
-        accessToken
+        accessToken,
+        refreshToken  // ← Add refresh token to response
       },
       message: 'Login successful'
     });
@@ -353,7 +354,8 @@ export const logout = async (req: Request, res: Response) => {
 
 export const refreshToken = async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.cookies;
+    // Try to get refresh token from request body first, then fall back to cookies
+    const refreshToken = req.body.refreshToken || req.cookies.refreshToken;
 
     if (!refreshToken) {
       return res.status(401).json({
@@ -416,7 +418,8 @@ export const refreshToken = async (req: Request, res: Response) => {
       success: true,
       data: {
         user,
-        accessToken: tokens.accessToken
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken  // ← Include new refresh token in response
       }
     });
   } catch (error) {

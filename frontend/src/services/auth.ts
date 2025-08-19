@@ -4,6 +4,7 @@ import { apiService } from './api';
 export interface AuthResponse {
   user: User;
   accessToken: string;
+  refreshToken: string;
 }
 
 export interface RegisterResponse extends AuthResponse {
@@ -16,6 +17,8 @@ export class AuthService {
     
     if (response.success && response.data) {
       apiService.setAuthToken(response.data.accessToken);
+      // Store refresh token for automatic token refresh
+      localStorage.setItem('refreshToken', response.data.refreshToken);
     }
     
     return response;
@@ -34,11 +37,12 @@ export class AuthService {
   async logout(): Promise<ApiResponse<any>> {
     try {
       const response = await apiService.post('/auth/logout');
-      apiService.clearAuthToken();
+      // Clear all auth data
+      this.clearAuth();
       return response;
     } catch (error) {
       // Clear token even if logout fails
-      apiService.clearAuthToken();
+      this.clearAuth();
       throw error;
     }
   }
@@ -73,9 +77,26 @@ export class AuthService {
     return apiService.post('/auth/verify-email', { token });
   }
 
-  // Check if user is authenticated
+  // Check if user is authenticated with valid token
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('accessToken');
+    const token = localStorage.getItem('accessToken');
+    if (!token) return false;
+    
+    try {
+      // Basic JWT structure validation (header.payload.signature)
+      const parts = token.split('.');
+      if (parts.length !== 3) return false;
+      
+      // Decode payload to check expiration
+      const payload = JSON.parse(atob(parts[1]));
+      const now = Date.now() / 1000;
+      
+      // Check if token is expired (with small buffer for network delay)
+      return payload.exp && payload.exp > (now + 30); // 30 seconds buffer
+    } catch (error) {
+      // Invalid token format
+      return false;
+    }
   }
 
   // Get stored access token
@@ -86,6 +107,7 @@ export class AuthService {
   // Clear all auth data
   clearAuth(): void {
     apiService.clearAuthToken();
+    localStorage.removeItem('refreshToken');
   }
 }
 

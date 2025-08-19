@@ -84,9 +84,18 @@ class ApiService {
   }
 
   private async refreshAccessToken(): Promise<string> {
-    const response = await this.api.post('/auth/refresh-token');
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    // Send refresh token in request body instead of relying on cookies
+    const response = await this.api.post('/auth/refresh-token', { refreshToken });
     const newToken = response.data.data.accessToken;
+    const newRefreshToken = response.data.data.refreshToken;
+    
     localStorage.setItem('accessToken', newToken);
+    localStorage.setItem('refreshToken', newRefreshToken);
     return newToken;
   }
 
@@ -141,6 +150,7 @@ class ApiService {
   // Clear auth token
   clearAuthToken() {
     this.setAuthToken(null);
+    localStorage.removeItem('refreshToken'); // Also clear refresh token
   }
 }
 
