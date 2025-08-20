@@ -11,10 +11,25 @@ const registerValidation = [
     body('firstName').trim().isLength({ min: 2, max: 50 }),
     body('lastName').trim().isLength({ min: 2, max: 50 }),
 ];
-// Login validation
+// Login validation - support both email and username
 const loginValidation = [
-    body('email').isEmail().normalizeEmail(),
     body('password').exists(),
+    // Custom validation for email OR username
+    body().custom((value, { req }) => {
+        const { email, username } = req.body;
+        if (!email && !username) {
+            throw new Error('Either email or username is required');
+        }
+        // Validate email format if email is provided
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            throw new Error('Invalid email format');
+        }
+        // Validate username format if username is provided (alphanumeric with dots allowed)
+        if (username && !/^[a-zA-Z0-9._-]+$/.test(username)) {
+            throw new Error('Username can only contain letters, numbers, dots, underscores, and hyphens');
+        }
+        return true;
+    })
 ];
 // MFA login validation
 const loginMFAValidation = [

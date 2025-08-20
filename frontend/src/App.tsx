@@ -15,6 +15,7 @@ import { AssistantPage } from '@/pages/AssistantPage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import { PatientsPage, PatientDetailPage, PatientFormPage, PatientHistoryPage } from '@/pages/patients';
 import { PackagesPage, PackageFormPage, PackageDetailPage } from '@/pages/packages';
+import { AppointmentsPage, AppointmentFormPage, AppointmentDetailPage, AppointmentPaymentPage } from '@/pages/appointments';
 import { ServicesManagementPage } from '@/pages/ServicesManagementPage';
 import { RoomsManagementPage } from '@/pages/RoomsManagementPage';
 import { StaffProfilePage } from '@/pages/StaffProfilePage';
@@ -279,15 +280,68 @@ function App() {
               }
             />
 
+            {/* Appointment Management Routes */}
             <Route
-              path="/appointments/*"
+              path="/appointments"
               element={
                 <ProtectedRoute>
                   <LayoutWrapper>
-                    <div className="space-y-6">
-                      <h1 className="text-3xl font-bold">Termine</h1>
-                      <p className="text-muted-foreground">Terminverwaltung in Kürze verfügbar...</p>
-                    </div>
+                    <AppointmentsPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/appointments/new"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <AppointmentFormPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/appointments/zahlung"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <AppointmentPaymentPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/appointments/:id"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <AppointmentDetailPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/appointments/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <AppointmentFormPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/appointments/:id/verschieben"
+              element={
+                <ProtectedRoute>
+                  <LayoutWrapper>
+                    <AppointmentFormPage />
                   </LayoutWrapper>
                 </ProtectedRoute>
               }

@@ -103,6 +103,7 @@ export const getPackages = async (req, res) => {
                                     name: true, // German name (primary language)
                                     price: true,
                                     category: true,
+                                    sessionCount: true, // Number of sessions per instance
                                 }
                             }
                         }
@@ -130,8 +131,14 @@ export const getPackages = async (req, res) => {
         ]);
         // Calculate session usage statistics
         const packagesWithStats = await Promise.all(packages.map(async (pkg) => {
-            const totalSessions = pkg.packageItems.reduce((sum, item) => sum + item.sessionCount, 0);
-            const usedSessions = pkg.packageItems.reduce((sum, item) => sum + item.completedCount, 0);
+            const totalSessions = pkg.packageItems.reduce((sum, item) => {
+                // item.sessionCount now directly contains the total sessions
+                return sum + item.sessionCount;
+            }, 0);
+            const usedSessions = pkg.packageItems.reduce((sum, item) => {
+                // completedCount now directly represents completed sessions
+                return sum + item.completedCount;
+            }, 0);
             return {
                 ...pkg,
                 totalSessions,
@@ -143,12 +150,14 @@ export const getPackages = async (req, res) => {
         }));
         res.json({
             success: true,
-            data: packagesWithStats,
-            pagination: {
-                page: query.page,
-                limit: query.limit,
-                total,
-                pages: Math.ceil(total / query.limit),
+            data: {
+                data: packagesWithStats,
+                pagination: {
+                    page: query.page,
+                    limit: query.limit,
+                    total,
+                    pages: Math.ceil(total / query.limit),
+                },
             },
         });
     }
@@ -193,6 +202,7 @@ export const getPackageById = async (req, res) => {
                                 price: true,
                                 category: true,
                                 duration: true,
+                                sessionCount: true, // Number of sessions per instance
                             }
                         }
                     }
@@ -243,8 +253,14 @@ export const getPackageById = async (req, res) => {
             });
         }
         // Calculate statistics
-        const totalSessions = packageData.packageItems.reduce((sum, item) => sum + item.sessionCount, 0);
-        const usedSessions = packageData.packageItems.reduce((sum, item) => sum + item.completedCount, 0);
+        const totalSessions = packageData.packageItems.reduce((sum, item) => {
+            // item.sessionCount now directly contains the total sessions
+            return sum + item.sessionCount;
+        }, 0);
+        const usedSessions = packageData.packageItems.reduce((sum, item) => {
+            // completedCount now directly represents completed sessions
+            return sum + item.completedCount;
+        }, 0);
         const totalPaid = packageData.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
         const packageWithStats = {
             ...packageData,
@@ -295,7 +311,7 @@ export const createPackage = async (req, res) => {
         const serviceIds = data.packageItems.map(item => item.serviceId);
         const services = await prisma.service.findMany({
             where: { id: { in: serviceIds }, isActive: true },
-            select: { id: true, name: true, price: true }
+            select: { id: true, name: true, price: true, sessionCount: true }
         });
         if (services.length !== serviceIds.length) {
             return res.status(400).json({
@@ -303,59 +319,108 @@ export const createPackage = async (req, res) => {
                 error: 'One or more services not found or inactive',
             });
         }
-        // Create package with items in a transaction
-        const result = await prisma.$transaction(async (tx) => {
-            // Create the package record
-            const packageResult = await tx.package.create({
-                data: {
-                    patientId: data.patientId,
-                    name: data.name,
-                    totalPrice: data.totalPrice,
-                    discountAmount: data.discountAmount || 0,
-                    finalPrice: data.finalPrice,
-                    createdById: userId,
-                },
-                include: {
-                    patient: {
-                        select: {
-                            firstName: true,
-                            lastName: true,
-                        }
+        // Create separate packages for each service type in a transaction
+        const results = await prisma.$transaction(async (tx) => {
+            const createdPackages = [];
+            // Group services by service type to calculate proportional pricing
+            const totalSessionsCount = data.packageItems.reduce((sum, item) => sum + item.sessionCount, 0);
+            const totalItemPrice = data.packageItems.reduce((sum, item) => {
+                const service = services.find(s => s.id === item.serviceId);
+                return sum + (Number(service?.price || 0) * item.sessionCount);
+            }, 0);
+            // Calculate discount and final price proportions
+            const discountAmount = data.discountAmount || 0;
+            const totalPrice = data.totalPrice;
+            // Create a separate package for each service type
+            for (const packageItem of data.packageItems) {
+                const service = services.find(s => s.id === packageItem.serviceId);
+                if (!service)
+                    continue;
+                // Calculate proportional pricing for this service package
+                const serviceItemPrice = Number(service.price) * packageItem.sessionCount;
+                const proportionalDiscount = totalItemPrice > 0 ? (serviceItemPrice / totalItemPrice) * discountAmount : 0;
+                const serviceTotalPrice = serviceItemPrice;
+                const serviceFinalPrice = serviceItemPrice - proportionalDiscount;
+                // Generate package name based on service
+                const packageName = `${packageItem.sessionCount}x ${service.name}`;
+                // Determine payment status based on payment scenario
+                let packagePaymentStatus = 'NONE';
+                if (data.payment) {
+                    // Check if payment covers the full amount
+                    const totalPaymentAmount = data.payment.amount;
+                    if (totalPaymentAmount >= data.finalPrice) {
+                        packagePaymentStatus = 'COMPLETED'; // Vollzahlung
+                    }
+                    else {
+                        packagePaymentStatus = 'PARTIALLY_PAID'; // Teilzahlung
                     }
                 }
-            });
-            // Create package items
-            await tx.packageItem.createMany({
-                data: data.packageItems.map(item => ({
-                    packageId: packageResult.id,
-                    serviceId: item.serviceId,
-                    sessionCount: item.sessionCount,
-                }))
-            });
-            // Create payment if provided
-            if (data.payment) {
-                await tx.payment.create({
+                // If no payment, it remains 'NONE' (Später zahlen)
+                // Create individual package record
+                const packageResult = await tx.package.create({
                     data: {
                         patientId: data.patientId,
-                        packageId: packageResult.id,
-                        amount: data.payment.amount,
-                        paymentMethod: data.payment.paymentMethod,
-                        paidSessionsCount: data.payment.paidSessionsCount || null,
-                        notes: data.payment.notes || null,
-                        status: 'COMPLETED',
-                        paidAt: new Date(),
+                        name: packageName,
+                        totalPrice: serviceTotalPrice,
+                        discountAmount: proportionalDiscount,
+                        finalPrice: serviceFinalPrice,
+                        paymentStatus: packagePaymentStatus,
                         createdById: userId,
+                    },
+                    include: {
+                        patient: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                            }
+                        }
                     }
                 });
+                // Create package item for this service
+                // sessionCount should reflect the total actual sessions (instances × service sessions)
+                const totalSessionsForItem = packageItem.sessionCount * (service.sessionCount || 1);
+                await tx.packageItem.create({
+                    data: {
+                        packageId: packageResult.id,
+                        serviceId: packageItem.serviceId,
+                        sessionCount: totalSessionsForItem,
+                    }
+                });
+                // Create proportional payment if provided
+                if (data.payment) {
+                    const proportionalPayment = data.payment.amount * (serviceFinalPrice / data.finalPrice);
+                    // Determine individual payment record status
+                    let paymentRecordStatus = 'COMPLETED';
+                    if (packagePaymentStatus === 'PARTIALLY_PAID') {
+                        paymentRecordStatus = 'PARTIALLY_PAID';
+                    }
+                    await tx.payment.create({
+                        data: {
+                            patientId: data.patientId,
+                            packageId: packageResult.id,
+                            amount: proportionalPayment,
+                            paymentMethod: data.payment.paymentMethod,
+                            paidSessionsCount: data.payment.paidSessionsCount ? Math.ceil((data.payment.paidSessionsCount * packageItem.sessionCount) / totalSessionsCount) : null,
+                            notes: data.payment.notes || null,
+                            status: paymentRecordStatus,
+                            paidAt: new Date(),
+                            createdById: userId,
+                        }
+                    });
+                }
+                createdPackages.push(packageResult);
             }
-            return packageResult;
+            return createdPackages;
         });
-        // Log the creation in audit trail
-        await AuditService.logCreate(req, 'Package', result.id, AuditService.cleanSensitiveData(result), `Created package "${result.name}" for: ${result.patient.firstName} ${result.patient.lastName}`);
+        // Log the creation in audit trail for each package
+        for (const packageResult of results) {
+            await AuditService.logCreate(req, 'Package', packageResult.id, AuditService.cleanSensitiveData(packageResult), `Created package "${packageResult.name}" for: ${packageResult.patient.firstName} ${packageResult.patient.lastName}`);
+        }
         res.status(201).json({
             success: true,
-            data: result,
-            message: 'Package created successfully',
+            data: results,
+            message: `${results.length} package(s) created successfully`,
+            totalPackages: results.length
         });
     }
     catch (error) {
@@ -552,26 +617,52 @@ export const addPayment = async (req, res) => {
                 error: `Payment amount exceeds remaining balance of €${remainingBalance.toFixed(2)}`,
             });
         }
-        const payment = await prisma.payment.create({
-            data: {
-                patientId: packageData.patientId,
-                packageId: id,
-                amount,
-                paymentMethod,
-                paidSessionsCount,
-                notes,
-                status: 'COMPLETED',
-                paidAt: new Date(),
-                createdById: userId,
-            },
-            include: {
-                createdBy: {
-                    select: {
-                        firstName: true,
-                        lastName: true,
+        // Calculate new total paid after this payment
+        const newTotalPaid = totalPaid + amount;
+        const finalPrice = Number(packageData.finalPrice);
+        // Determine payment status for this record and for the package
+        let paymentRecordStatus = 'COMPLETED';
+        let packagePaymentStatus = 'PARTIALLY_PAID';
+        if (newTotalPaid >= finalPrice) {
+            // Full payment completed
+            packagePaymentStatus = 'COMPLETED';
+            paymentRecordStatus = 'COMPLETED';
+        }
+        else {
+            // Partial payment
+            packagePaymentStatus = 'PARTIALLY_PAID';
+            paymentRecordStatus = 'PARTIALLY_PAID';
+        }
+        // Use transaction to create payment and update package status
+        const payment = await prisma.$transaction(async (tx) => {
+            // Create the payment record
+            const newPayment = await tx.payment.create({
+                data: {
+                    patientId: packageData.patientId,
+                    packageId: id,
+                    amount,
+                    paymentMethod,
+                    paidSessionsCount,
+                    notes,
+                    status: paymentRecordStatus,
+                    paidAt: new Date(),
+                    createdById: userId,
+                },
+                include: {
+                    createdBy: {
+                        select: {
+                            firstName: true,
+                            lastName: true,
+                        }
                     }
                 }
-            }
+            });
+            // Update package payment status
+            await tx.package.update({
+                where: { id },
+                data: { paymentStatus: packagePaymentStatus }
+            });
+            return newPayment;
         });
         // Log the payment in audit trail
         await AuditService.logCreate(req, 'Payment', payment.id, AuditService.cleanSensitiveData(payment), `Added payment of €${amount} for package "${packageData.name}" - ${packageData.patient.firstName} ${packageData.patient.lastName}`);

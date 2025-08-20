@@ -437,8 +437,8 @@ export function PackageList({
                           <Edit className="h-4 w-4" />
                         </Button>
                       )}
-                      {onAddPayment && pkg.status === 'ACTIVE' && pkg.totalPaid > 0 && pkg.totalPaid < pkg.finalPrice && (
-                        <Button variant="outline" size="sm" onClick={() => onAddPayment(pkg)}>
+                      {onAddPayment && pkg.status === 'ACTIVE' && pkg.paymentStatus !== 'COMPLETED' && (
+                        <Button variant="outline" size="sm" onClick={() => onAddPayment(pkg)} title="Zahlung hinzufügen">
                           <CreditCard className="h-4 w-4" />
                         </Button>
                       )}

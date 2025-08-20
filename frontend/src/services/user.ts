@@ -53,6 +53,10 @@ export class UserService {
   async toggleUserStatus(id: string): Promise<ApiResponse<User>> {
     return apiService.patch<User>(`/users/${id}/toggle-status`);
   }
+
+  async getStaffUsers(): Promise<ApiResponse<User[]>> {
+    return apiService.get<User[]>('/users?specialization=true&isActive=true');
+  }
 }
 
 export const userService = new UserService();

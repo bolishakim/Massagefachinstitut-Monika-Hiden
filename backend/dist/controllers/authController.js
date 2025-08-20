@@ -89,13 +89,26 @@ export const register = async (req, res) => {
 };
 export const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        // Find user
-        const user = await prisma.user.findUnique({
-            where: { email },
+        const { email, username, password } = req.body;
+        const loginIdentifier = email || username;
+        if (!loginIdentifier) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email or username is required'
+            });
+        }
+        // Find user by email or username
+        const user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email: loginIdentifier },
+                    { username: loginIdentifier }
+                ]
+            },
             select: {
                 id: true,
                 email: true,
+                username: true,
                 password: true,
                 firstName: true,
                 lastName: true,
@@ -108,7 +121,7 @@ export const login = async (req, res) => {
         if (!user) {
             return res.status(401).json({
                 success: false,
-                error: 'Invalid email or password'
+                error: 'Invalid login credentials'
             });
         }
         // Check if user is active
@@ -176,7 +189,8 @@ export const login = async (req, res) => {
             requiresMFA: false,
             data: {
                 user: userWithoutPassword,
-                accessToken
+                accessToken,
+                refreshToken // ← Add refresh token to response
             },
             message: 'Login successful'
         });
@@ -299,7 +313,8 @@ export const logout = async (req, res) => {
 };
 export const refreshToken = async (req, res) => {
     try {
-        const { refreshToken } = req.cookies;
+        // Try to get refresh token from request body first, then fall back to cookies
+        const refreshToken = req.body.refreshToken || req.cookies.refreshToken;
         if (!refreshToken) {
             return res.status(401).json({
                 success: false,
@@ -353,7 +368,8 @@ export const refreshToken = async (req, res) => {
             success: true,
             data: {
                 user,
-                accessToken: tokens.accessToken
+                accessToken: tokens.accessToken,
+                refreshToken: tokens.refreshToken // ← Include new refresh token in response
             }
         });
     }

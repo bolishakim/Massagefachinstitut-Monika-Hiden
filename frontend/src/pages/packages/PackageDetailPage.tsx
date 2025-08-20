@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { packageService } from '@/services/packages';
-import { ServicePackage } from '@/types';
+import { ServicePackage, PaymentMethod } from '@/types';
 import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { PackagePaymentModal } from '@/components/modals/PackagePaymentModal';
 import { 
   AlertCircle, 
   Loader2, 
@@ -49,6 +50,15 @@ export function PackageDetailPage() {
     message: '',
     onConfirm: () => {},
     isLoading: false,
+  });
+
+  // Payment modal state
+  const [paymentModal, setPaymentModal] = useState<{
+    isOpen: boolean;
+    package: ServicePackage | null;
+  }>({
+    isOpen: false,
+    package: null
   });
 
   const loadPackageData = async () => {
@@ -129,8 +139,34 @@ export function PackageDetailPage() {
   };
 
   const handleAddPayment = () => {
-    // TODO: Implement payment modal
-    console.log('Add payment for package:', packageData?.id);
+    if (packageData) {
+      setPaymentModal({
+        isOpen: true,
+        package: packageData
+      });
+    }
+  };
+
+  const handlePaymentSubmit = async (packageId: string, data: {
+    amount: number;
+    paymentMethod: PaymentMethod;
+    paidSessionsCount?: number;
+    notes?: string;
+  }) => {
+    try {
+      const response = await packageService.addPayment(packageId, data);
+      
+      if (response.success) {
+        setSuccessMessage('Zahlung erfolgreich hinzugefügt');
+        setPaymentModal({ isOpen: false, package: null });
+        // Reload package data to reflect updated payment status
+        await loadPackageData();
+      } else {
+        throw new Error(response.error || 'Fehler beim Hinzufügen der Zahlung');
+      }
+    } catch (error: any) {
+      throw new Error(error.message || 'Fehler beim Hinzufügen der Zahlung');
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -483,6 +519,14 @@ export function PackageDetailPage() {
         cancelText="Abbrechen"
         variant="danger"
         isLoading={confirmationModal.isLoading}
+      />
+
+      {/* Payment Modal */}
+      <PackagePaymentModal
+        isOpen={paymentModal.isOpen}
+        onClose={() => setPaymentModal({ isOpen: false, package: null })}
+        package={paymentModal.package}
+        onSubmit={handlePaymentSubmit}
       />
     </div>
   );

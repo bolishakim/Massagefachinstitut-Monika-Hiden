@@ -274,70 +274,68 @@ export const deleteUser = async (req, res) => {
                 error: 'User not found',
             });
         }
-        // Use a transaction to handle the deletion properly
-        await prisma.$transaction(async (tx) => {
-            // Log the user deletion for audit purposes before deleting
+        // Instead of deleting, deactivate the user to preserve data integrity
+        // This maintains all created records (packages, appointments, etc.) for audit purposes
+        const deactivatedUser = await prisma.$transaction(async (tx) => {
+            // Log the user deactivation for audit purposes
             if (req.user) {
                 await tx.auditLog.create({
                     data: {
                         userId: req.user.id,
-                        action: 'DELETE',
+                        action: 'UPDATE',
                         tableName: 'users',
                         recordId: id,
-                        description: `Admin ${req.user.email} deleted user ${user.email}`,
+                        description: `Admin ${req.user.email} deactivated user ${user.email}`,
                         ipAddress: req.ip || req.connection.remoteAddress,
                         userAgent: req.get('User-Agent'),
                         oldValues: {
                             email: user.email,
                             firstName: user.firstName,
                             lastName: user.lastName,
-                            role: user.role
+                            role: user.role,
+                            isActive: user.isActive
                         }
                     }
                 });
             }
-            // Delete dependent records that prevent user deletion
-            // These deletions are necessary due to foreign key constraints
-            // Delete user sessions (some may not have onDelete: Cascade)
+            // Deactivate the user instead of deleting
+            const updatedUser = await tx.user.update({
+                where: { id },
+                data: {
+                    isActive: false,
+                    // Optionally, you could also clear sensitive fields if needed:
+                    // email: `deleted_${Date.now()}_${user.email}`, // Keep original for audit
+                },
+                select: {
+                    id: true,
+                    email: true,
+                    firstName: true,
+                    lastName: true,
+                    role: true,
+                    isActive: true,
+                    emailVerified: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    lastLoginAt: true,
+                },
+            });
+            // Invalidate all active sessions for this user
             await tx.userSession.deleteMany({
                 where: { userId: id }
             });
-            // Delete consent records
-            await tx.consentRecord.deleteMany({
-                where: { userId: id }
-            });
-            // Delete data export requests
-            await tx.dataExportRequest.deleteMany({
-                where: { userId: id }
-            });
-            // Delete notifications
-            await tx.notification.deleteMany({
-                where: { userId: id }
-            });
-            // For audit compliance: Delete audit logs associated with this user
-            // Note: In a production environment, consider implementing user anonymization
-            // instead of deletion to maintain audit trail integrity
-            await tx.auditLog.deleteMany({
-                where: { userId: id }
-            });
-            await tx.gDPRAuditLog.deleteMany({
-                where: { userId: id }
-            });
-            // Finally, delete the user
-            await tx.user.delete({
-                where: { id },
-            });
+            return updatedUser;
         });
         res.json({
             success: true,
-            message: 'User deleted successfully',
+            data: deactivatedUser,
+            message: 'User deactivated successfully (preserving data integrity)',
         });
     }
     catch (error) {
-        console.error('Error deleting user:', error);
+        console.error('Error deactivating user:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to delete user',
+            error: 'Failed to deactivate user',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }
