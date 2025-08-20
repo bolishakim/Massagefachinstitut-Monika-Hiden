@@ -108,9 +108,11 @@ export function AppointmentFormPage() {
       } else {
         setError(response.error || 'Fehler beim Speichern des Termins');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error submitting appointment:', err);
-      setError('Fehler beim Speichern des Termins');
+      // Extract error message from API response
+      const errorMessage = err?.error || err?.message || 'Fehler beim Speichern des Termins';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

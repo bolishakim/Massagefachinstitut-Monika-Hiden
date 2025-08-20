@@ -19,7 +19,11 @@ import {
   Loader2,
   X,
   Copy,
-  Ban
+  Ban,
+  Calendar as CalendarIcon,
+  CheckCircle,
+  UserX,
+  DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -44,6 +48,7 @@ interface AppointmentListProps {
   onCompleteAppointment?: (appointment: Appointment) => void;
   onRescheduleAppointment?: (appointment: Appointment) => void;
   onCancelAppointment?: (appointment: Appointment) => void;
+  onNoShowAppointment?: (appointment: Appointment) => void;
   onDuplicateAppointment?: (appointment: Appointment) => void;
   onFiltersChange?: (filters: any) => void;
   pagination?: PaginatedResponse<Appointment>['pagination'];
@@ -92,6 +97,7 @@ export function AppointmentList({
   onCompleteAppointment,
   onRescheduleAppointment,
   onCancelAppointment,
+  onNoShowAppointment,
   onDuplicateAppointment,
   onFiltersChange,
   pagination,
@@ -168,6 +174,28 @@ export function AppointmentList({
       return false;
     });
   }, [appointments, localSearchValue]);
+
+  // Stats calculation
+  const stats = useMemo(() => {
+    const total = appointments.length;
+    const scheduled = appointments.filter(a => a.status === 'SCHEDULED').length;
+    const completed = appointments.filter(a => a.status === 'COMPLETED').length;
+    const noShow = appointments.filter(a => a.status === 'NO_SHOW').length;
+    const cancelled = appointments.filter(a => a.status === 'CANCELLED').length;
+
+    // Calculate paid appointments - those with packages that have been paid or individual payments
+    const paid = appointments.filter(appointment => {
+      if (appointment.package) {
+        // For package appointments, check if package is fully or partially paid
+        return appointment.package.paymentStatus === 'COMPLETED' || 
+               appointment.package.paymentStatus === 'PARTIALLY_PAID';
+      }
+      // For non-package appointments, we'd need payment info (not available in current structure)
+      return false;
+    }).length;
+
+    return { total, scheduled, completed, noShow, cancelled, paid };
+  }, [appointments]);
 
 
   // Highlight search terms in real-time
@@ -320,6 +348,81 @@ export function AppointmentList({
             Neuer Termin
           </Button>
         </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+              <CalendarIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Gesamt</p>
+              <p className="text-2xl font-bold">{stats.total}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center">
+              <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Geplant</p>
+              <p className="text-2xl font-bold">{stats.scheduled}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Abgeschlossen</p>
+              <p className="text-2xl font-bold">{stats.completed}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center">
+              <UserX className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">No Show</p>
+              <p className="text-2xl font-bold">{stats.noShow}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Abgesagt</p>
+              <p className="text-2xl font-bold">{stats.cancelled}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
+              <DollarSign className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Bezahlt</p>
+              <p className="text-2xl font-bold">{stats.paid}</p>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -585,16 +688,26 @@ export function AppointmentList({
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          {appointment.status === 'SCHEDULED' && onCompleteAppointment && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onCompleteAppointment(appointment)}
-                              className="text-green-600 hover:text-green-700"
-                            >
-                              <CheckCircle2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                          {appointment.status === 'SCHEDULED' && onCompleteAppointment && (() => {
+                            // Check if appointment is in the future
+                            const appointmentDate = new Date(appointment.scheduledDate);
+                            const [endHours, endMinutes] = appointment.endTime.split(':').map(Number);
+                            appointmentDate.setHours(endHours, endMinutes, 0, 0);
+                            const isFuture = appointmentDate > new Date();
+                            
+                            return (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onCompleteAppointment(appointment)}
+                                className={isFuture ? "text-gray-400 cursor-not-allowed" : "text-green-600 hover:text-green-700"}
+                                disabled={isFuture}
+                                title={isFuture ? "Ein zukünftiger Termin kann nicht als abgeschlossen markiert werden." : "Termin abschließen"}
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                              </Button>
+                            );
+                          })()}
                           {appointment.status === 'SCHEDULED' && onRescheduleAppointment && (
                             <Button
                               variant="ghost"
@@ -615,38 +728,11 @@ export function AppointmentList({
                         }
                         items={[
                           {
-                            id: 'view',
-                            label: 'Details anzeigen',
-                            icon: <Eye className="h-4 w-4" />,
-                            onClick: () => onAppointmentView(appointment)
-                          },
-                          {
-                            id: 'edit',
-                            label: 'Bearbeiten',
-                            icon: <Edit className="h-4 w-4" />,
-                            onClick: () => onAppointmentEdit(appointment),
-                            show: canEdit
-                          },
-                          {
                             id: 'duplicate',
                             label: 'Duplizieren',
                             icon: <Copy className="h-4 w-4" />,
                             onClick: () => onDuplicateAppointment?.(appointment),
                             show: canEdit && !!onDuplicateAppointment
-                          },
-                          {
-                            id: 'reschedule',
-                            label: 'Verschieben',
-                            icon: <Clock className="h-4 w-4" />,
-                            onClick: () => onRescheduleAppointment?.(appointment),
-                            show: appointment.status === 'SCHEDULED' && canEdit && !!onRescheduleAppointment
-                          },
-                          {
-                            id: 'complete',
-                            label: 'Abschließen',
-                            icon: <CheckCircle2 className="h-4 w-4" />,
-                            onClick: () => onCompleteAppointment?.(appointment),
-                            show: appointment.status === 'SCHEDULED' && canEdit && !!onCompleteAppointment
                           },
                           {
                             id: 'pay',
@@ -655,6 +741,23 @@ export function AppointmentList({
                             onClick: () => onMarkAsPaid?.([appointment.id]),
                             show: appointment.status !== 'CANCELLED' && !!onMarkAsPaid
                           },
+                          (() => {
+                            // Check if appointment is in the future
+                            const appointmentDate = new Date(appointment.scheduledDate);
+                            const [startHours, startMinutes] = appointment.startTime.split(':').map(Number);
+                            appointmentDate.setHours(startHours, startMinutes, 0, 0);
+                            const isFuture = appointmentDate > new Date();
+                            
+                            return {
+                              id: 'noshow',
+                              label: isFuture ? 'No Show (zukünftig)' : 'No Show',
+                              icon: <XCircle className="h-4 w-4" />,
+                              onClick: () => onNoShowAppointment?.(appointment),
+                              variant: 'warning' as const,
+                              disabled: isFuture,
+                              show: appointment.status === 'SCHEDULED' && !!onNoShowAppointment
+                            };
+                          })(),
                           {
                             id: 'cancel',
                             label: 'Termin absagen',

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
 import { User, LoginForm, RegisterForm } from '@/types';
 import { authService, AuthResponse, RegisterResponse } from '@/services/auth';
 
@@ -23,7 +23,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isAuthenticated = !!user && authService.isAuthenticated();
+  // Memoize isAuthenticated to prevent unnecessary recalculations
+  const isAuthenticated = useMemo(() => {
+    return !!user && authService.isAuthenticated();
+  }, [user]);
 
   // Load user on mount with development mode protection
   useEffect(() => {
@@ -36,9 +39,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     
     initAuth();
     
+    // Listen for automatic logout events from API service
+    const handleAutoLogout = (event: CustomEvent) => {
+      console.log('🔔 Received auto-logout event:', event.detail);
+      if (event.detail?.reason === 'TOKEN_REFRESH_FAILED') {
+        console.log('🚪 Auto-logout triggered by token refresh failure');
+        setUser(null);
+      }
+    };
+    
+    window.addEventListener('auth:logout', handleAutoLogout as EventListener);
+    
     // Cleanup function to prevent effects after component unmount
     return () => {
       isMounted = false;
+      window.removeEventListener('auth:logout', handleAutoLogout as EventListener);
     };
   }, []); // Empty dependency array to run only once
 
@@ -52,12 +67,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // No token or invalid token, just set loading to false
         setUser(null);
         if (token) {
-          // Clear invalid token
+          // Clear invalid token silently - no need to log
           authService.clearAuth();
         }
       }
     } catch (error) {
-      console.error('Auth initialization error:', error);
+      // Don't log errors during initialization as they're expected when not logged in
       authService.clearAuth();
       setUser(null);
     } finally {

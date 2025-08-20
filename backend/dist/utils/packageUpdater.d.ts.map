@@ -1,0 +1,1 @@
+{"version":3,"file":"packageUpdater.d.ts","sourceRoot":"","sources":["../../src/utils/packageUpdater.ts"],"names":[],"mappings":"AAGA,qBAAa,cAAc;IACzB;;;OAGG;WACU,qBAAqB,CAAC,SAAS,EAAE,MAAM,GAAG,OAAO,CAAC,IAAI,CAAC;IAgFpE;;;OAGG;WACU,sBAAsB,CAAC,UAAU,EAAE,MAAM,EAAE,GAAG,OAAO,CAAC,IAAI,CAAC;IAMxE;;;OAGG;WACU,sBAAsB,IAAI,OAAO,CAAC,IAAI,CAAC;CAwBrD"}

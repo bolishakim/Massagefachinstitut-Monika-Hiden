@@ -7,7 +7,8 @@ import {
   updatePackage,
   cancelPackage,
   addPayment,
-  getPackageStats
+  getPackageStats,
+  recalculateAllPackageSessions
 } from '../controllers/packageController';
 
 const router = express.Router();
@@ -23,5 +24,6 @@ router.post('/', createPackage);
 router.put('/:id', updatePackage);
 router.patch('/:id/cancel', cancelPackage);
 router.post('/:id/payments', addPayment);
+router.post('/recalculate-sessions', recalculateAllPackageSessions);
 
 export default router;

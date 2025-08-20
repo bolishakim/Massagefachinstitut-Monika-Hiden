@@ -192,6 +192,104 @@
   @apply bg-foreground/60;
 }
 
+/* Date, time, and datetime input styling for better dark mode support */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  position: relative;
+  color-scheme: light dark;
+}
+
+/* Light mode date/time/datetime inputs */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.5);
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Dark mode date/time/datetime inputs */
+.dark input[type="date"],
+.dark input[type="time"],
+.dark input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8) brightness(1.2);
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.dark input[type="time"]::-webkit-calendar-picker-indicator:hover,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) brightness(1.5);
+  opacity: 1;
+}
+
+/* Firefox date/time/datetime input support */
+.dark input[type="date"]::-moz-calendar-picker-indicator,
+.dark input[type="time"]::-moz-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-moz-calendar-picker-indicator {
+  filter: invert(0.8) brightness(1.2);
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.dark input[type="date"]::-moz-calendar-picker-indicator:hover,
+.dark input[type="time"]::-moz-calendar-picker-indicator:hover,
+.dark input[type="datetime-local"]::-moz-calendar-picker-indicator:hover {
+  filter: invert(1) brightness(1.5);
+  opacity: 1;
+}
+
+/* Ensure date/time/datetime input text remains visible */
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field,
+input[type="time"]::-webkit-datetime-edit-text,
+input[type="time"]::-webkit-datetime-edit-hour-field,
+input[type="time"]::-webkit-datetime-edit-minute-field,
+input[type="time"]::-webkit-datetime-edit-second-field,
+input[type="time"]::-webkit-datetime-edit-ampm-field,
+input[type="datetime-local"]::-webkit-datetime-edit-text,
+input[type="datetime-local"]::-webkit-datetime-edit-month-field,
+input[type="datetime-local"]::-webkit-datetime-edit-day-field,
+input[type="datetime-local"]::-webkit-datetime-edit-year-field,
+input[type="datetime-local"]::-webkit-datetime-edit-hour-field,
+input[type="datetime-local"]::-webkit-datetime-edit-minute-field {
+  color: hsl(var(--foreground));
+}
+
+.dark input[type="date"]::-webkit-datetime-edit-text,
+.dark input[type="date"]::-webkit-datetime-edit-month-field,
+.dark input[type="date"]::-webkit-datetime-edit-day-field,
+.dark input[type="date"]::-webkit-datetime-edit-year-field,
+.dark input[type="time"]::-webkit-datetime-edit-text,
+.dark input[type="time"]::-webkit-datetime-edit-hour-field,
+.dark input[type="time"]::-webkit-datetime-edit-minute-field,
+.dark input[type="time"]::-webkit-datetime-edit-second-field,
+.dark input[type="time"]::-webkit-datetime-edit-ampm-field,
+.dark input[type="datetime-local"]::-webkit-datetime-edit-text,
+.dark input[type="datetime-local"]::-webkit-datetime-edit-month-field,
+.dark input[type="datetime-local"]::-webkit-datetime-edit-day-field,
+.dark input[type="datetime-local"]::-webkit-datetime-edit-year-field,
+.dark input[type="datetime-local"]::-webkit-datetime-edit-hour-field,
+.dark input[type="datetime-local"]::-webkit-datetime-edit-minute-field {
+  color: hsl(var(--foreground));
+}
+
 /* Fancy decorative app name styling with responsive design */
 .app-name {
   font-family: 'Cinzel', 'Playfair Display', 'Georgia', 'Times New Roman', serif;

@@ -52,28 +52,49 @@ class ApiService {
           // Don't try to refresh tokens for auth endpoints
           const authEndpoints = ['/auth/login', '/auth/register', '/auth/refresh-token', '/auth/forgot-password', '/auth/reset-password', '/auth/verify-email'];
           if (authEndpoints.some(endpoint => originalRequest.url?.includes(endpoint))) {
+            console.log('🔐 401 error on auth endpoint, not attempting token refresh');
             return Promise.reject(error);
           }
+
+          console.log('🔄 401 error detected, attempting token refresh for:', originalRequest.url);
 
           try {
             // If there's already a refresh in progress, wait for it
             if (this.refreshTokenPromise) {
+              console.log('⏳ Token refresh already in progress, waiting...');
               const newToken = await this.refreshTokenPromise;
               originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              console.log('✅ Used existing refresh, retrying original request');
               return this.api(originalRequest);
             }
 
             // Start a new refresh
+            console.log('🚀 Starting new token refresh...');
             this.refreshTokenPromise = this.refreshAccessToken();
             const newToken = await this.refreshTokenPromise;
             this.refreshTokenPromise = null;
 
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            console.log('✅ Token refreshed successfully, retrying original request');
             return this.api(originalRequest);
-          } catch (refreshError) {
+          } catch (refreshError: any) {
             this.refreshTokenPromise = null;
+            console.error('❌ Token refresh failed:', refreshError);
+            console.error('🔄 Refresh token error details:', {
+              message: refreshError.message,
+              response: refreshError.response?.data,
+              status: refreshError.response?.status
+            });
+            
+            // Clear auth and notify user about logout
             this.clearAuthToken();
-            console.error('Token refresh failed:', refreshError);
+            console.log('🚪 Logging out user due to refresh failure');
+            
+            // Dispatch a custom event to notify the auth system
+            window.dispatchEvent(new CustomEvent('auth:logout', { 
+              detail: { reason: 'TOKEN_REFRESH_FAILED', error: refreshError } 
+            }));
+            
             return Promise.reject(refreshError);
           }
         }
@@ -86,17 +107,44 @@ class ApiService {
   private async refreshAccessToken(): Promise<string> {
     const refreshToken = localStorage.getItem('refreshToken');
     if (!refreshToken) {
+      console.error('❌ No refresh token available in localStorage');
       throw new Error('No refresh token available');
     }
 
-    // Send refresh token in request body instead of relying on cookies
-    const response = await this.api.post('/auth/refresh-token', { refreshToken });
-    const newToken = response.data.data.accessToken;
-    const newRefreshToken = response.data.data.refreshToken;
-    
-    localStorage.setItem('accessToken', newToken);
-    localStorage.setItem('refreshToken', newRefreshToken);
-    return newToken;
+    console.log('🔑 Attempting to refresh access token...');
+
+    try {
+      // Send refresh token in request body instead of relying on cookies
+      const response = await this.api.post('/auth/refresh-token', { refreshToken });
+      
+      console.log('📡 Refresh token API response received:', {
+        success: response.data.success,
+        hasAccessToken: !!response.data.data?.accessToken,
+        hasRefreshToken: !!response.data.data?.refreshToken
+      });
+
+      const newToken = response.data.data.accessToken;
+      const newRefreshToken = response.data.data.refreshToken;
+      
+      if (!newToken || !newRefreshToken) {
+        console.error('❌ Invalid refresh response - missing tokens:', response.data);
+        throw new Error('Invalid refresh token response');
+      }
+      
+      localStorage.setItem('accessToken', newToken);
+      localStorage.setItem('refreshToken', newRefreshToken);
+      
+      console.log('✅ Access token refreshed successfully');
+      return newToken;
+    } catch (error: any) {
+      console.error('❌ Refresh token request failed:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        refreshTokenExists: !!refreshToken
+      });
+      throw error;
+    }
   }
 
   // Generic request method

@@ -12,6 +12,9 @@ export interface RegisterResponse extends AuthResponse {
 }
 
 export class AuthService {
+  private lastLogTime = 0;
+  private lastWarningTime = 0;
+  
   async login(credentials: LoginForm): Promise<ApiResponse<AuthResponse>> {
     const response = await apiService.post<AuthResponse>('/auth/login', credentials);
     
@@ -80,21 +83,48 @@ export class AuthService {
   // Check if user is authenticated with valid token
   isAuthenticated(): boolean {
     const token = localStorage.getItem('accessToken');
-    if (!token) return false;
+    if (!token) {
+      return false;
+    }
     
     try {
       // Basic JWT structure validation (header.payload.signature)
       const parts = token.split('.');
-      if (parts.length !== 3) return false;
+      if (parts.length !== 3) {
+        return false;
+      }
       
       // Decode payload to check expiration
       const payload = JSON.parse(atob(parts[1]));
-      const now = Date.now() / 1000;
+      const nowSeconds = Date.now() / 1000;
+      const timeUntilExpiry = payload.exp - nowSeconds;
+      const isValid = payload.exp && payload.exp > nowSeconds; // No buffer, let API interceptor handle refresh
       
-      // Check if token is expired (with small buffer for network delay)
-      return payload.exp && payload.exp > (now + 30); // 30 seconds buffer
+      // Only log when token is getting close to expiry AND we haven't logged recently
+      const nowMs = Date.now();
+      if (timeUntilExpiry <= 300 && timeUntilExpiry > 0 && (nowMs - this.lastLogTime) > 60000) { // Only log when less than 5 minutes remaining AND last log was >1 minute ago
+        console.log('🔐 Token status:', {
+          timeUntilExpiry: Math.round(timeUntilExpiry / 60 * 100) / 100 + ' minutes',
+          isValid: isValid,
+          expiresAt: new Date(payload.exp * 1000).toLocaleString()
+        });
+        this.lastLogTime = nowMs;
+      }
+      
+      // Only warn once when token FIRST expires (not repeatedly)
+      if (!isValid && timeUntilExpiry <= 0 && (nowMs - this.lastWarningTime) > 300000) { // Only warn once every 5 minutes when expired
+        console.warn('⚠️ Token has expired, considering invalid');
+        this.lastWarningTime = nowMs;
+      }
+      
+      return isValid;
     } catch (error) {
-      // Invalid token format
+      // Only log token validation errors once every 5 minutes
+      const nowMs = Date.now();
+      if ((nowMs - this.lastWarningTime) > 300000) {
+        console.error('🔐 Token validation error:', error);
+        this.lastWarningTime = nowMs;
+      }
       return false;
     }
   }

@@ -14,7 +14,8 @@ import {
   Plus,
   UserPlus,
   FileText,
-  Clock
+  Clock,
+  Package
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Button } from '../ui/Button';
@@ -202,6 +203,17 @@ export function Header({ user, onMenuClick, showMenuButton }: HeaderProps) {
                       <div>
                         <p className="font-medium">Neue Krankengeschichte</p>
                         <p className="text-xs text-muted-foreground">Medizinische Dokumentation erstellen</p>
+                      </div>
+                    </a>
+                    <a
+                      href="/packages/new"
+                      className="flex items-center px-4 py-3 text-sm hover:bg-accent transition-colors"
+                      onClick={() => setNewMenuOpen(false)}
+                    >
+                      <Package className="h-4 w-4 mr-3 text-primary" />
+                      <div>
+                        <p className="font-medium">Neues Paket</p>
+                        <p className="text-xs text-muted-foreground">Behandlungspaket erstellen</p>
                       </div>
                     </a>
                     <a

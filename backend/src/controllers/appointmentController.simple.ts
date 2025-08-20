@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/db.js';
+import { PackageUpdater } from '../utils/packageUpdater.js';
 
 interface AuthRequest extends Request {
   user?: {
@@ -23,7 +24,8 @@ export const appointmentController = {
         staffId,
         roomId,
         patientId,
-        packageId
+        packageId,
+        date
       } = req.query;
 
       const pageNum = parseInt(page as string);
@@ -52,6 +54,21 @@ export const appointmentController = {
       if (roomId) where.roomId = roomId;
       if (patientId) where.patientId = patientId;
       if (packageId) where.packageId = packageId;
+
+      // Date filter - filter by specific date (daily filter)
+      if (date) {
+        const filterDate = new Date(date as string);
+        // Set time to start and end of day for proper filtering
+        const startOfDay = new Date(filterDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(filterDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        where.scheduledDate = {
+          gte: startOfDay,
+          lte: endOfDay
+        };
+      }
 
       const [appointments, total] = await Promise.all([
         prisma.appointment.findMany({
@@ -248,6 +265,55 @@ export const appointmentController = {
         });
       }
 
+      // Validate package session limit if appointment is linked to a package
+      if (packageId) {
+        // Get package with its items to check session limits
+        const packageData = await prisma.package.findUnique({
+          where: { id: packageId },
+          include: {
+            packageItems: {
+              where: { serviceId },
+              select: {
+                sessionCount: true
+              }
+            }
+          }
+        });
+
+        if (!packageData) {
+          return res.status(400).json({
+            success: false,
+            error: 'Package not found'
+          });
+        }
+
+        // Find the package item for this service
+        const packageItem = packageData.packageItems.find(item => item);
+        if (!packageItem) {
+          return res.status(400).json({
+            success: false,
+            error: 'This service is not included in the selected package'
+          });
+        }
+
+        // Count existing active appointments (all statuses except CANCELLED) for this package and service
+        const activeAppointmentsCount = await prisma.appointment.count({
+          where: {
+            packageId,
+            serviceId,
+            status: { not: 'CANCELLED' }
+          }
+        });
+
+        // Check if adding this appointment would exceed the session limit
+        if (activeAppointmentsCount >= packageItem.sessionCount) {
+          return res.status(400).json({
+            success: false,
+            error: `Termin kann nicht erstellt werden. Dieses Paket erlaubt nur ${packageItem.sessionCount} Sitzung(en) für diese Behandlung. Es existieren bereits ${activeAppointmentsCount} aktive Termine. Bitte stornieren Sie zuerst einen bestehenden Termin oder wenden Sie sich an die Verwaltung.`
+          });
+        }
+      }
+
       // Calculate end time
       const [hours, minutes] = startTime.split(':').map(Number);
       const totalMinutes = hours * 60 + minutes + service.duration;
@@ -286,6 +352,16 @@ export const appointmentController = {
         }
       });
 
+      // Update package sessions if appointment is linked to a package
+      if (appointment.packageId) {
+        try {
+          await PackageUpdater.updatePackageSessions(appointment.packageId);
+        } catch (updateError) {
+          console.error('Error updating package sessions:', updateError);
+          // Don't fail the appointment creation, just log the error
+        }
+      }
+
       res.status(201).json({
         success: true,
         data: appointment
@@ -312,10 +388,100 @@ export const appointmentController = {
         });
       }
 
+      // Convert scheduledDate string to Date object if present
+      const processedData = { ...updateData };
+      if (processedData.scheduledDate) {
+        processedData.scheduledDate = new Date(processedData.scheduledDate);
+      }
+
+      // If startTime is being updated, we need to recalculate the endTime
+      if (processedData.startTime) {
+        // First, get the appointment with its service to know the duration
+        const appointmentWithService = await prisma.appointment.findUnique({
+          where: { id },
+          include: {
+            service: {
+              select: {
+                duration: true
+              }
+            }
+          }
+        });
+
+        if (!appointmentWithService) {
+          return res.status(404).json({
+            success: false,
+            error: 'Termin nicht gefunden'
+          });
+        }
+
+        if (!appointmentWithService.service) {
+          return res.status(400).json({
+            success: false,
+            error: 'Termin hat keine zugeordnete Behandlung'
+          });
+        }
+
+        // Calculate new end time based on the new start time and original duration
+        const [hours, minutes] = processedData.startTime.split(':').map(Number);
+        const duration = appointmentWithService.service.duration || 30; // Default to 30 minutes if not set
+        const totalMinutes = hours * 60 + minutes + duration;
+        const endHours = Math.floor(totalMinutes / 60);
+        const endMinutes = totalMinutes % 60;
+        processedData.endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+      }
+
+      // Validate if trying to mark appointment as completed or no show
+      if (processedData.status === 'COMPLETED' || processedData.status === 'NO_SHOW') {
+        // First fetch the appointment to check its scheduled date and time
+        const existingAppointment = await prisma.appointment.findUnique({
+          where: { id },
+          select: {
+            scheduledDate: true,
+            startTime: true,
+            endTime: true
+          }
+        });
+
+        if (!existingAppointment) {
+          return res.status(404).json({
+            success: false,
+            error: 'Termin nicht gefunden'
+          });
+        }
+
+        // For COMPLETED, use end time; for NO_SHOW, use start time
+        const appointmentDate = new Date(existingAppointment.scheduledDate);
+        if (processedData.status === 'COMPLETED') {
+          const [endHours, endMinutes] = existingAppointment.endTime.split(':').map(Number);
+          appointmentDate.setHours(endHours, endMinutes, 0, 0);
+        } else if (processedData.status === 'NO_SHOW') {
+          const [startHours, startMinutes] = existingAppointment.startTime.split(':').map(Number);
+          appointmentDate.setHours(startHours, startMinutes, 0, 0);
+        }
+
+        const now = new Date();
+
+        // Check if appointment time is in the future
+        if (appointmentDate > now) {
+          const statusText = processedData.status === 'COMPLETED' ? 'abgeschlossen' : '"No Show"';
+          return res.status(400).json({
+            success: false,
+            error: `Ein zukünftiger Termin kann nicht als ${statusText} markiert werden.`
+          });
+        }
+      }
+
+      // Get the original appointment to check if packageId or status changed
+      const originalAppointment = await prisma.appointment.findUnique({
+        where: { id },
+        select: { packageId: true, status: true }
+      });
+
       const appointment = await prisma.appointment.update({
         where: { id },
         data: {
-          ...updateData,
+          ...processedData,
           updatedAt: new Date()
         },
         include: {
@@ -332,6 +498,34 @@ export const appointmentController = {
           }
         }
       });
+
+      // Update package sessions if status changed or package changed
+      const statusChanged = originalAppointment?.status !== appointment.status;
+      const packageChanged = originalAppointment?.packageId !== appointment.packageId;
+      
+      if (statusChanged || packageChanged) {
+        const packageIdsToUpdate = new Set<string>();
+        
+        // Add old package if exists
+        if (originalAppointment?.packageId) {
+          packageIdsToUpdate.add(originalAppointment.packageId);
+        }
+        
+        // Add new package if exists
+        if (appointment.packageId) {
+          packageIdsToUpdate.add(appointment.packageId);
+        }
+        
+        // Update all affected packages
+        for (const packageId of packageIdsToUpdate) {
+          try {
+            await PackageUpdater.updatePackageSessions(packageId);
+          } catch (updateError) {
+            console.error('Error updating package sessions:', updateError);
+            // Don't fail the appointment update, just log the error
+          }
+        }
+      }
 
       res.json({
         success: true,
@@ -351,12 +545,28 @@ export const appointmentController = {
     try {
       const { id } = req.params;
 
+      // Get the appointment to check if it has a package
+      const appointment = await prisma.appointment.findUnique({
+        where: { id },
+        select: { packageId: true }
+      });
+
       await prisma.appointment.update({
         where: { id },
         data: {
           status: 'CANCELLED'
         }
       });
+
+      // Update package sessions if appointment was linked to a package
+      if (appointment?.packageId) {
+        try {
+          await PackageUpdater.updatePackageSessions(appointment.packageId);
+        } catch (updateError) {
+          console.error('Error updating package sessions:', updateError);
+          // Don't fail the cancellation, just log the error
+        }
+      }
 
       res.json({
         success: true,

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { AuditService } from '../services/auditService';
+import { PackageUpdater } from '../utils/packageUpdater.js';
 
 const prisma = new PrismaClient();
 
@@ -822,6 +823,24 @@ export const getPackageStats = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch package statistics',
+    });
+  }
+};
+
+// Recalculate all package sessions (admin utility)
+export const recalculateAllPackageSessions = async (req: Request, res: Response) => {
+  try {
+    await PackageUpdater.recalculateAllPackages();
+    
+    res.json({
+      success: true,
+      message: 'All package sessions recalculated successfully'
+    });
+  } catch (error) {
+    console.error('Error recalculating package sessions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to recalculate package sessions'
     });
   }
 };

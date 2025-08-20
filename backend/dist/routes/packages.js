@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth';
-import { getPackages, getPackageById, createPackage, updatePackage, cancelPackage, addPayment, getPackageStats } from '../controllers/packageController';
+import { getPackages, getPackageById, createPackage, updatePackage, cancelPackage, addPayment, getPackageStats, recalculateAllPackageSessions } from '../controllers/packageController';
 const router = express.Router();
 // All package routes require authentication
 router.use(authenticateToken);
@@ -12,5 +12,6 @@ router.post('/', createPackage);
 router.put('/:id', updatePackage);
 router.patch('/:id/cancel', cancelPackage);
 router.post('/:id/payments', addPayment);
+router.post('/recalculate-sessions', recalculateAllPackageSessions);
 export default router;
 //# sourceMappingURL=packages.js.map

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AppointmentList } from '@/components/appointments/AppointmentList';
+import { PackagePaymentModal } from '@/components/modals/PackagePaymentModal';
 import { appointmentService } from '@/services/appointments';
-import { Appointment, PaginatedResponse } from '@/types';
+import { packageService } from '@/services/packages';
+import { Appointment, PaginatedResponse, ServicePackage, PaymentMethod } from '@/types';
 import { Alert } from '@/components/ui/Alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +16,17 @@ export function AppointmentsPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [pagination, setPagination] = useState<PaginatedResponse<Appointment>['pagination'] | undefined>();
   const [currentFilters, setCurrentFilters] = useState<any>({});
+  
+  // Payment modal state
+  const [paymentModal, setPaymentModal] = useState<{
+    isOpen: boolean;
+    package: ServicePackage | null;
+    appointment: Appointment | null;
+  }>({
+    isOpen: false,
+    package: null,
+    appointment: null
+  });
   
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -49,7 +62,8 @@ export function AppointmentsPage() {
       }
       
       if (filters?.date) {
-        apiFilters.date = new Date(filters.date).toISOString();
+        // Handle date filter - use the date as-is for daily filtering (YYYY-MM-DD format)
+        apiFilters.date = filters.date;
       }
       
       if (filters?.startDate) {
@@ -136,6 +150,8 @@ export function AppointmentsPage() {
       
       if (response.success) {
         setSuccessMessage(`${response.data.cancelledCount} Termin(e) erfolgreich abgesagt`);
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(null), 3000);
         // Refresh the appointment list after successful cancellation
         await loadAppointments(currentPage, searchQuery, currentFilters);
       } else {
@@ -148,23 +164,126 @@ export function AppointmentsPage() {
   };
 
   const handleMarkAsPaid = async (appointmentIds: string[]) => {
-    // Navigate to payment form
-    navigate(`/appointments/zahlung?termine=${appointmentIds.join(',')}`);
+    // For now, we only support single appointment payment
+    if (appointmentIds.length !== 1) {
+      setError('Bitte wählen Sie nur einen Termin zum Bezahlen aus');
+      return;
+    }
+
+    const appointmentId = appointmentIds[0];
+    const appointment = appointments.find(apt => apt.id === appointmentId);
+    
+    if (!appointment) {
+      setError('Termin nicht gefunden');
+      return;
+    }
+
+    // If appointment has a package, load the package and check payment status
+    if (appointment.packageId && appointment.package) {
+      try {
+        // Get fresh package data to ensure we have the latest payment info
+        const response = await packageService.getPackageById(appointment.packageId);
+        if (response.success && response.data) {
+          const pkg = response.data;
+          
+          // Check if this appointment is already paid for
+          // Simple approach: Check if there are any payments with notes mentioning this appointment ID
+          // or if the package has been fully paid (totalPaid >= finalPrice)
+          const isPackageFullyPaid = Number(pkg.totalPaid) >= Number(pkg.finalPrice);
+          
+          // Check if there's a payment with this appointment ID in the notes
+          const hasAppointmentSpecificPayment = pkg.payments?.some(payment => 
+            payment.notes && payment.notes.includes(appointment.id)
+          ) || false;
+          
+          if (isPackageFullyPaid || hasAppointmentSpecificPayment) {
+            setError('Der Betrag für diesen Termin wurde bereits bezahlt.');
+            return;
+          }
+          
+          setPaymentModal({
+            isOpen: true,
+            package: pkg,
+            appointment: appointment
+          });
+        } else {
+          setError('Paket konnte nicht geladen werden');
+        }
+      } catch (err) {
+        console.error('Error loading package:', err);
+        setError('Fehler beim Laden der Paketdaten');
+      }
+    } else {
+      // For appointments without packages, navigate to the old payment flow
+      navigate(`/appointments/zahlung?termine=${appointmentIds.join(',')}`);
+    }
+  };
+
+  const handlePaymentSubmit = async (packageId: string, data: {
+    amount: number;
+    paymentMethod: PaymentMethod;
+    paidSessionsCount?: number;
+    notes?: string;
+  }) => {
+    try {
+      // If payment is made from appointment context, add appointment ID to notes
+      const appointmentContext = paymentModal.appointment;
+      let paymentNotes = data.notes || '';
+      
+      if (appointmentContext) {
+        const appointmentInfo = `Termin: ${appointmentContext.id} (${appointmentContext.patient?.firstName} ${appointmentContext.patient?.lastName} - ${new Date(appointmentContext.scheduledDate).toLocaleDateString('de-DE')})`;
+        paymentNotes = paymentNotes ? `${paymentNotes}\n\n${appointmentInfo}` : appointmentInfo;
+      }
+      
+      const paymentData = {
+        ...data,
+        notes: paymentNotes
+      };
+      
+      const response = await packageService.addPayment(packageId, paymentData);
+      
+      if (response.success) {
+        setSuccessMessage('Zahlung erfolgreich hinzugefügt');
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(null), 3000);
+        setPaymentModal({ isOpen: false, package: null, appointment: null });
+        // Reload appointments to reflect any updated payment status
+        await loadAppointments(currentPage, searchQuery, currentFilters);
+      } else {
+        throw new Error(response.error || 'Fehler beim Hinzufügen der Zahlung');
+      }
+    } catch (error: any) {
+      throw new Error(error.message || 'Fehler beim Hinzufügen der Zahlung');
+    }
   };
 
   const handleCompleteAppointment = async (appointment: Appointment) => {
     try {
+      // Check if appointment is in the future
+      const appointmentDate = new Date(appointment.scheduledDate);
+      const [endHours, endMinutes] = appointment.endTime.split(':').map(Number);
+      appointmentDate.setHours(endHours, endMinutes, 0, 0);
+      
+      const now = new Date();
+      
+      if (appointmentDate > now) {
+        setError('Ein zukünftiger Termin kann nicht als abgeschlossen markiert werden.');
+        return;
+      }
+      
       const response = await appointmentService.completeAppointment(appointment.id, 'Termin abgeschlossen');
       
       if (response.success) {
         setSuccessMessage(`Termin für ${appointment.patient?.firstName} ${appointment.patient?.lastName} als abgeschlossen markiert`);
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(null), 3000);
         await loadAppointments(currentPage, searchQuery, currentFilters);
       } else {
-        setError('Fehler beim Abschließen des Termins');
+        setError(response.error || 'Fehler beim Abschließen des Termins');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error completing appointment:', err);
-      setError('Fehler beim Abschließen des Termins');
+      setError(err.error || err.message || 'Fehler beim Abschließen des Termins');
     }
   };
 
@@ -184,6 +303,8 @@ export function AppointmentsPage() {
       
       if (response.success) {
         setSuccessMessage('Termin erfolgreich abgesagt');
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(null), 3000);
         await loadAppointments(currentPage, searchQuery, currentFilters);
       } else {
         setError('Fehler beim Absagen des Termins');
@@ -191,6 +312,44 @@ export function AppointmentsPage() {
     } catch (err) {
       console.error('Error cancelling appointment:', err);
       setError('Fehler beim Absagen des Termins');
+    }
+  };
+
+  const handleNoShowAppointment = async (appointment: Appointment) => {
+    // Check if appointment is in the future
+    const appointmentDate = new Date(appointment.scheduledDate);
+    const [startHours, startMinutes] = appointment.startTime.split(':').map(Number);
+    appointmentDate.setHours(startHours, startMinutes, 0, 0);
+    
+    const now = new Date();
+    
+    if (appointmentDate > now) {
+      setError('Ein zukünftiger Termin kann nicht als "No Show" markiert werden.');
+      return;
+    }
+
+    if (!window.confirm(
+      `Möchten Sie den Termin für ${appointment.patient?.firstName} ${appointment.patient?.lastName} als "No Show" markieren?`
+    )) {
+      return;
+    }
+
+    try {
+      const response = await appointmentService.updateAppointment(appointment.id, {
+        status: 'NO_SHOW'
+      });
+      
+      if (response.success) {
+        setSuccessMessage('Termin als "No Show" markiert');
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(null), 3000);
+        await loadAppointments(currentPage, searchQuery, currentFilters);
+      } else {
+        setError('Fehler beim Markieren als "No Show"');
+      }
+    } catch (err) {
+      console.error('Error marking appointment as no show:', err);
+      setError('Fehler beim Markieren als "No Show"');
     }
   };
 
@@ -271,6 +430,7 @@ export function AppointmentsPage() {
         onCompleteAppointment={handleCompleteAppointment}
         onRescheduleAppointment={handleRescheduleAppointment}
         onCancelAppointment={handleCancelAppointment}
+        onNoShowAppointment={handleNoShowAppointment}
         onDuplicateAppointment={handleDuplicateAppointment}
         onFiltersChange={handleFiltersChange}
         pagination={pagination}
@@ -278,6 +438,15 @@ export function AppointmentsPage() {
         userRole={user?.role}
         showPatientColumn={true}
         showPackageColumn={true}
+      />
+
+      {/* Package Payment Modal */}
+      <PackagePaymentModal
+        isOpen={paymentModal.isOpen}
+        onClose={() => setPaymentModal({ isOpen: false, package: null, appointment: null })}
+        package={paymentModal.package}
+        appointment={paymentModal.appointment}
+        onSubmit={handlePaymentSubmit}
       />
     </div>
   );

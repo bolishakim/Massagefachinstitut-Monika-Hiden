@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { appointmentService } from '@/services/appointments';
-import { Appointment } from '@/types';
+import { packageService } from '@/services/packages';
+import { Appointment, ServicePackage } from '@/types';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -28,6 +29,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export function AppointmentDetailPage() {
   const [appointment, setAppointment] = useState<Appointment | null>(null);
+  const [packageData, setPackageData] = useState<ServicePackage | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +63,19 @@ export function AppointmentDetailPage() {
       
       if (response.success && response.data) {
         setAppointment(response.data);
+        
+        // Load full package data with payments if appointment has a package
+        if (response.data.packageId) {
+          try {
+            const packageResponse = await packageService.getPackageById(response.data.packageId);
+            if (packageResponse.success && packageResponse.data) {
+              setPackageData(packageResponse.data);
+            }
+          } catch (packageErr) {
+            console.error('Error loading package data:', packageErr);
+            // Don't fail the whole page if package loading fails
+          }
+        }
       } else {
         setError('Termin nicht gefunden');
       }
@@ -104,6 +119,18 @@ export function AppointmentDetailPage() {
     if (!appointment) return;
 
     try {
+      // Check if appointment is in the future
+      const appointmentDate = new Date(appointment.scheduledDate);
+      const [endHours, endMinutes] = appointment.endTime.split(':').map(Number);
+      appointmentDate.setHours(endHours, endMinutes, 0, 0);
+      
+      const now = new Date();
+      
+      if (appointmentDate > now) {
+        setError('Ein zukünftiger Termin kann nicht als abgeschlossen markiert werden.');
+        return;
+      }
+      
       setActionLoading(true);
       const response = await appointmentService.completeAppointment(
         appointment.id, 
@@ -114,11 +141,11 @@ export function AppointmentDetailPage() {
         setSuccessMessage('Termin als abgeschlossen markiert');
         await loadAppointment(appointment.id);
       } else {
-        setError('Fehler beim Abschließen des Termins');
+        setError(response.error || 'Fehler beim Abschließen des Termins');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error completing appointment:', err);
-      setError('Fehler beim Abschließen des Termins');
+      setError(err.error || err.message || 'Fehler beim Abschließen des Termins');
     } finally {
       setActionLoading(false);
     }
@@ -129,7 +156,14 @@ export function AppointmentDetailPage() {
   };
 
   const handleMarkAsPaid = () => {
-    navigate(`/appointments/zahlung?termine=${id}`);
+    // Check if already paid first
+    if (paymentInfo.isPaid) {
+      setError('Der Betrag für diesen Termin wurde bereits bezahlt.');
+      return;
+    }
+    
+    // Navigate to appointment list with this specific appointment selected for payment
+    navigate(`/appointments?zahlungFuer=${id}`);
   };
 
   const handleViewPatient = () => {
@@ -174,6 +208,28 @@ export function AppointmentDetailPage() {
 
   const canEdit = user?.role === 'ADMIN' || user?.role === 'MODERATOR';
   const canDelete = user?.role === 'ADMIN';
+
+  // Check if this appointment has been paid for
+  const getAppointmentPaymentInfo = () => {
+    if (!appointment || !packageData) {
+      return { isPaid: false, payment: null };
+    }
+
+    // Check if there's a payment with this appointment ID in the notes
+    const appointmentPayment = packageData.payments?.find(payment => 
+      payment.notes && payment.notes.includes(appointment.id)
+    );
+
+    if (appointmentPayment) {
+      return { isPaid: true, payment: appointmentPayment };
+    }
+
+    // Check if package is fully paid (as fallback)
+    const isPackageFullyPaid = Number(packageData.totalPaid) >= Number(packageData.finalPrice);
+    return { isPaid: isPackageFullyPaid, payment: null };
+  };
+
+  const paymentInfo = getAppointmentPaymentInfo();
 
   if (loading) {
     return (
@@ -238,10 +294,26 @@ export function AppointmentDetailPage() {
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Verschieben
               </Button>
-              <Button variant="outline" size="sm" onClick={handleComplete} disabled={actionLoading}>
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Abschließen
-              </Button>
+              {(() => {
+                // Check if appointment is in the future
+                const appointmentDate = new Date(appointment.scheduledDate);
+                const [endHours, endMinutes] = appointment.endTime.split(':').map(Number);
+                appointmentDate.setHours(endHours, endMinutes, 0, 0);
+                const isFuture = appointmentDate > new Date();
+                
+                return (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleComplete} 
+                    disabled={actionLoading || isFuture}
+                    title={isFuture ? "Ein zukünftiger Termin kann nicht als abgeschlossen markiert werden." : "Termin abschließen"}
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Abschließen
+                  </Button>
+                );
+              })()}
             </>
           )}
           {canEdit && (
@@ -360,6 +432,81 @@ export function AppointmentDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* Payment Status Section */}
+            {appointment.packageId && (
+              <div className="mt-6 pt-6 border-t">
+                <div className="flex items-center justify-between mb-4">
+                  <H3 className="text-sm">Zahlungsstatus</H3>
+                  {paymentInfo.isPaid ? (
+                    <Badge variant="success" className="flex items-center gap-2">
+                      <CreditCard className="h-3 w-3" />
+                      Bezahlt
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="flex items-center gap-2">
+                      <XCircle className="h-3 w-3" />
+                      Nicht bezahlt
+                    </Badge>
+                  )}
+                </div>
+                
+                {paymentInfo.isPaid && paymentInfo.payment ? (
+                  <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <div className="font-medium text-green-800 dark:text-green-200">Betrag</div>
+                        <div className="text-green-700 dark:text-green-300">
+                          €{paymentInfo.payment.amount ? Number(paymentInfo.payment.amount).toFixed(2) : '0.00'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-medium text-green-800 dark:text-green-200">Zahlungsmethode</div>
+                        <div className="text-green-700 dark:text-green-300">
+                          {paymentInfo.payment.paymentMethod === 'CASH' ? '💵 Bar' :
+                           paymentInfo.payment.paymentMethod === 'CARD' ? '💳 Karte' :
+                           paymentInfo.payment.paymentMethod === 'BANK_TRANSFER' ? '🏦 Überweisung' :
+                           paymentInfo.payment.paymentMethod}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-medium text-green-800 dark:text-green-200">Datum</div>
+                        <div className="text-green-700 dark:text-green-300">
+                          {paymentInfo.payment.paidAt ? 
+                            new Date(paymentInfo.payment.paidAt).toLocaleDateString('de-DE') :
+                            new Date(paymentInfo.payment.createdAt).toLocaleDateString('de-DE')
+                          }
+                        </div>
+                      </div>
+                    </div>
+                    {paymentInfo.payment.notes && (
+                      <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-800">
+                        <div className="font-medium text-green-800 dark:text-green-200 text-xs mb-1">Notizen</div>
+                        <div className="text-green-700 dark:text-green-300 text-xs whitespace-pre-wrap">
+                          {paymentInfo.payment.notes}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : paymentInfo.isPaid ? (
+                  <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <div className="text-sm text-green-700 dark:text-green-300">
+                      Dieser Termin ist über das vollständig bezahlte Paket abgedeckt.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                    <div className="text-sm text-orange-700 dark:text-orange-300">
+                      Für diesen Termin wurde noch keine Zahlung erfasst.
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleMarkAsPaid}>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Zahlung hinzufügen
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {appointment.notes && (
               <div className="mt-6 pt-6 border-t">
@@ -481,7 +628,7 @@ export function AppointmentDetailPage() {
                   </div>
                 )}
 
-                {appointment.package.paymentStatus !== 'COMPLETED' && (
+                {appointment.package.paymentStatus !== 'COMPLETED' && !paymentInfo.isPaid && (
                   <Button variant="outline" size="sm" onClick={handleMarkAsPaid} className="w-full">
                     <CreditCard className="h-4 w-4 mr-2" />
                     Als bezahlt markieren
@@ -492,23 +639,40 @@ export function AppointmentDetailPage() {
           )}
 
           {/* Payment History */}
-          {appointment.package?.payments && appointment.package.payments.length > 0 && (
+          {packageData?.payments && packageData.payments.length > 0 && (
             <Card className="p-6">
               <H3 className="mb-4">Zahlungshistorie</H3>
               <div className="space-y-3">
-                {appointment.package.payments.map((payment) => (
-                  <div key={payment.id} className="flex justify-between items-start">
-                    <div>
-                      <div className="text-sm font-medium">
-                        €{payment.amount ? Number(payment.amount).toFixed(2) : '0.00'}
+                {packageData.payments.map((payment) => (
+                  <div key={payment.id} className="border rounded-lg p-3">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="text-sm font-medium">
+                          €{payment.amount ? Number(payment.amount).toFixed(2) : '0.00'}
+                        </div>
+                        <TextXS className="text-muted-foreground">
+                          {payment.paidAt ? 
+                            new Date(payment.paidAt).toLocaleDateString('de-DE') :
+                            new Date(payment.createdAt).toLocaleDateString('de-DE')
+                          }
+                        </TextXS>
                       </div>
-                      <TextXS className="text-muted-foreground">
-                        {payment.paidAt && new Date(payment.paidAt).toLocaleDateString('de-DE')}
-                      </TextXS>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge variant={payment.status === 'COMPLETED' ? 'success' : 'warning'}>
+                          {payment.status === 'COMPLETED' ? 'Bezahlt' : payment.status}
+                        </Badge>
+                        {payment.notes && payment.notes.includes(appointment?.id || '') && (
+                          <Badge variant="secondary" className="text-xs">
+                            Dieser Termin
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <Badge variant={payment.status === 'COMPLETED' ? 'success' : 'warning'}>
-                      {payment.status === 'COMPLETED' ? 'Bezahlt' : payment.status}
-                    </Badge>
+                    {payment.notes && (
+                      <TextXS className="text-muted-foreground mt-2 p-2 bg-muted rounded text-xs">
+                        {payment.notes}
+                      </TextXS>
+                    )}
                   </div>
                 ))}
               </div>
