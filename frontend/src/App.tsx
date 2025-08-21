@@ -20,6 +20,7 @@ import { ServicesManagementPage } from '@/pages/ServicesManagementPage';
 import { RoomsManagementPage } from '@/pages/RoomsManagementPage';
 import { StaffProfilePage } from '@/pages/StaffProfilePage';
 import { AuditLogsPage } from '@/pages/AuditLogsPage';
+import { CalendarPage } from '@/pages/calendar/CalendarPage';
 import { Role } from '@/types';
 import '@/styles/markdown.css';
 
@@ -265,16 +266,13 @@ function App() {
               }
             />
             
-            {/* Medical Center Routes - Placeholders */}
+            {/* Calendar Route */}
             <Route
               path="/calendar"
               element={
                 <ProtectedRoute>
                   <LayoutWrapper>
-                    <div className="space-y-6">
-                      <h1 className="text-3xl font-bold">Terminkalender</h1>
-                      <p className="text-muted-foreground">Terminkalender in Kürze verfügbar...</p>
-                    </div>
+                    <CalendarPage />
                   </LayoutWrapper>
                 </ProtectedRoute>
               }

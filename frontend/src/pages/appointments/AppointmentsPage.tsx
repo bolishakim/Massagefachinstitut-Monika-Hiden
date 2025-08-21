@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AppointmentList } from '@/components/appointments/AppointmentList';
 import { PackagePaymentModal } from '@/components/modals/PackagePaymentModal';
@@ -31,7 +31,6 @@ export function AppointmentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const processedSuccessParam = useRef<string | null>(null);
 
   // Get current page and filters from URL
   const currentPage = parseInt(searchParams.get('seite') || '1');
@@ -117,22 +116,15 @@ export function AppointmentsPage() {
   // Handle success message from URL parameter
   useEffect(() => {
     const successParam = searchParams.get('erfolg');
-    if (successParam && processedSuccessParam.current !== successParam) {
-      processedSuccessParam.current = successParam;
+    if (successParam) {
       setSuccessMessage(decodeURIComponent(successParam));
-      
       // Remove the success parameter from URL after showing the message
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('erfolg');
       setSearchParams(newSearchParams, { replace: true });
       
-      // Clear success message after 3 seconds
-      const timer = setTimeout(() => {
-        setSuccessMessage(null);
-        processedSuccessParam.current = null; // Reset so we can process new success messages
-      }, 3000);
-      
-      return () => clearTimeout(timer);
+      // Clear success message after 1.5 seconds (same as patient/package forms)
+      setTimeout(() => setSuccessMessage(null), 1500);
     }
   }, [searchParams, setSearchParams]);
 
