@@ -147,20 +147,33 @@ export const getPackages = async (req: Request, res: Response) => {
     // Calculate session usage statistics
     const packagesWithStats = await Promise.all(
       packages.map(async (pkg) => {
+        // Get all appointments for this package to calculate remaining sessions
+        const allAppointments = await prisma.appointment.findMany({
+          where: {
+            packageId: pkg.id,
+            status: { not: 'CANCELLED' } // Exclude cancelled appointments from remaining count
+          },
+          select: { serviceId: true, status: true }
+        });
+
         const totalSessions = pkg.packageItems.reduce((sum, item) => {
-          // item.sessionCount now directly contains the total sessions
           return sum + item.sessionCount;
         }, 0);
+
+        // Used sessions: Only COMPLETED and NO_SHOW appointments
         const usedSessions = pkg.packageItems.reduce((sum, item) => {
-          // completedCount now directly represents completed sessions
-          return sum + item.completedCount;
+          return sum + item.completedCount; // completedCount now includes COMPLETED + NO_SHOW
         }, 0);
+
+        // Remaining sessions: Total sessions minus all non-cancelled appointments
+        const appointmentsCount = allAppointments.length;
+        const remainingSessions = totalSessions - appointmentsCount;
         
         return {
           ...pkg,
           totalSessions,
           usedSessions,
-          remainingSessions: totalSessions - usedSessions,
+          remainingSessions: Math.max(0, remainingSessions), // Ensure non-negative
           usagePercentage: totalSessions > 0 ? Math.round((usedSessions / totalSessions) * 100) : 0,
           totalPaid: pkg.payments.reduce((sum, payment) => sum + Number(payment.amount), 0),
         };
@@ -274,22 +287,36 @@ export const getPackageById = async (req: Request, res: Response) => {
       });
     }
 
+    // Get all appointments for this package to calculate remaining sessions
+    const allAppointments = await prisma.appointment.findMany({
+      where: {
+        packageId: id,
+        status: { not: 'CANCELLED' } // Exclude cancelled appointments from remaining count
+      },
+      select: { serviceId: true, status: true }
+    });
+
     // Calculate statistics
     const totalSessions = packageData.packageItems.reduce((sum, item) => {
-      // item.sessionCount now directly contains the total sessions
       return sum + item.sessionCount;
     }, 0);
+
+    // Used sessions: Only COMPLETED and NO_SHOW appointments (stored in completedCount)
     const usedSessions = packageData.packageItems.reduce((sum, item) => {
-      // completedCount now directly represents completed sessions
-      return sum + item.completedCount;
+      return sum + item.completedCount; // completedCount now includes COMPLETED + NO_SHOW
     }, 0);
+
+    // Remaining sessions: Total sessions minus all non-cancelled appointments
+    const appointmentsCount = allAppointments.length;
+    const remainingSessions = Math.max(0, totalSessions - appointmentsCount);
+
     const totalPaid = packageData.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
 
     const packageWithStats = {
       ...packageData,
       totalSessions,
       usedSessions,
-      remainingSessions: totalSessions - usedSessions,
+      remainingSessions,
       usagePercentage: totalSessions > 0 ? Math.round((usedSessions / totalSessions) * 100) : 0,
       totalPaid,
       remainingBalance: Number(packageData.finalPrice) - totalPaid,

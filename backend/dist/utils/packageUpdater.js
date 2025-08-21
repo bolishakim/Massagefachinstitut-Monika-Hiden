@@ -24,32 +24,32 @@ export class PackageUpdater {
             const packageItems = await prisma.packageItem.findMany({
                 where: { packageId }
             });
-            // Count completed sessions per service
-            const completedCountsMap = new Map();
-            // Count all non-cancelled appointments per service
-            const totalCountsMap = new Map();
+            // Count used sessions per service (only COMPLETED and NO_SHOW)
+            const usedSessionsMap = new Map();
+            // Count remaining sessions per service (all appointments excluding CANCELLED)
+            const remainingSessionsMap = new Map();
             appointments.forEach(appointment => {
-                // Count total appointments per service
-                const currentTotal = totalCountsMap.get(appointment.serviceId) || 0;
-                totalCountsMap.set(appointment.serviceId, currentTotal + 1);
-                // Count completed appointments
-                if (appointment.status === AppointmentStatus.COMPLETED) {
-                    const currentCount = completedCountsMap.get(appointment.serviceId) || 0;
-                    completedCountsMap.set(appointment.serviceId, currentCount + 1);
+                // Count all non-cancelled appointments as "remaining sessions used"
+                const currentRemaining = remainingSessionsMap.get(appointment.serviceId) || 0;
+                remainingSessionsMap.set(appointment.serviceId, currentRemaining + 1);
+                // Count only completed and no-show appointments as "used sessions"
+                if (appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.NO_SHOW) {
+                    const currentUsed = usedSessionsMap.get(appointment.serviceId) || 0;
+                    usedSessionsMap.set(appointment.serviceId, currentUsed + 1);
                 }
             });
-            // Update each package item with the completed count
+            // Update each package item with the used sessions count (COMPLETED + NO_SHOW)
             for (const item of packageItems) {
-                const completedCount = completedCountsMap.get(item.serviceId) || 0;
+                const usedCount = usedSessionsMap.get(item.serviceId) || 0;
                 await prisma.packageItem.update({
                     where: { id: item.id },
-                    data: { completedCount }
+                    data: { completedCount: usedCount }
                 });
             }
-            // Check if all sessions are completed
-            const allCompleted = packageItems.every(item => {
-                const completedCount = completedCountsMap.get(item.serviceId) || 0;
-                return completedCount >= item.sessionCount;
+            // Check if all sessions are used (COMPLETED or NO_SHOW)
+            const allUsed = packageItems.every(item => {
+                const usedCount = usedSessionsMap.get(item.serviceId) || 0;
+                return usedCount >= item.sessionCount;
             });
             // Get current package status
             const currentPackage = await prisma.package.findUnique({
@@ -57,14 +57,14 @@ export class PackageUpdater {
                 select: { status: true }
             });
             // Update package status if needed
-            if (allCompleted && currentPackage?.status !== PackageStatus.COMPLETED) {
+            if (allUsed && currentPackage?.status !== PackageStatus.COMPLETED) {
                 await prisma.package.update({
                     where: { id: packageId },
                     data: { status: PackageStatus.COMPLETED }
                 });
             }
-            else if (!allCompleted && currentPackage?.status === PackageStatus.COMPLETED) {
-                // Reopen package if sessions were uncompleted
+            else if (!allUsed && currentPackage?.status === PackageStatus.COMPLETED) {
+                // Reopen package if sessions were not all used
                 await prisma.package.update({
                     where: { id: packageId },
                     data: { status: PackageStatus.ACTIVE }

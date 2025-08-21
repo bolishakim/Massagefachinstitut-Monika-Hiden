@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar,
   Clock,
@@ -13,7 +14,12 @@ import {
   CheckCircle2,
   Loader2,
   Plus,
-  Trash2
+  Trash2,
+  Search,
+  X,
+  ArrowLeft,
+  ArrowRight,
+  Save
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -23,6 +29,7 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { Badge } from '@/components/ui/Badge';
 import { Alert } from '@/components/ui/Alert';
 import { Patient, ServicePackage, Service, User as StaffUser, Room, PaymentMethod } from '@/types';
+import { clsx } from 'clsx';
 import { appointmentService } from '@/services/appointments';
 import { patientService } from '@/services/patients';
 import { packageService } from '@/services/packages';
@@ -92,6 +99,10 @@ export function AppointmentForm({
   preselectedPatient,
   preselectedPackage
 }: AppointmentFormProps) {
+  // Step management
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const [isMultiple, setIsMultiple] = useState(false);
   const [includePayment, setIncludePayment] = useState(false);
   const [appointmentSlots, setAppointmentSlots] = useState<AppointmentSlot[]>([]);
@@ -111,8 +122,11 @@ export function AppointmentForm({
   // Loading states
   const [loadingData, setLoadingData] = useState(true);
   
+  // Custom validation errors
+  const [customErrors, setCustomErrors] = useState<Record<string, string>>({});
+  
   const schema = isMultiple ? multipleAppointmentsSchema : appointmentSchema;
-  const { register, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm({
+  const { register, handleSubmit, watch, setValue, getValues, formState: { errors }, reset } = useForm({
     resolver: zodResolver(schema),
     defaultValues: initialData || {
       patientId: preselectedPatient || '',
@@ -132,6 +146,14 @@ export function AppointmentForm({
   const selectedPackage = packages.find(p => p.id === watchedValues.packageId);
   const selectedService = services.find(s => s.id === watchedValues.serviceId);
 
+  // Check if package has available sessions
+  const hasAvailableSessions = selectedPackage ? 
+    (selectedPackage.remainingSessions !== undefined ? 
+      selectedPackage.remainingSessions > 0 : 
+      (selectedPackage.totalSessions - selectedPackage.usedSessions) > 0
+    ) : false;
+
+
   // Load initial data
   useEffect(() => {
     loadInitialData();
@@ -144,10 +166,10 @@ export function AppointmentForm({
     }
   }, [watchedValues.patientId]);
 
-  // Load services when package changes
+  // Load services and detailed package info when package changes
   useEffect(() => {
     if (watchedValues.packageId) {
-      loadPackageServices(watchedValues.packageId);
+      loadPackageDetails(watchedValues.packageId);
     }
   }, [watchedValues.packageId]);
 
@@ -191,10 +213,23 @@ export function AppointmentForm({
     }
   };
 
-  const loadPackageServices = async (packageId: string) => {
+  const loadPackageDetails = async (packageId: string) => {
     try {
       const response = await packageService.getPackageById(packageId);
       if (response.success && response.data) {
+        console.log('Package details loaded:', response.data);
+        console.log('Total sessions:', response.data.totalSessions);
+        console.log('Used sessions:', response.data.usedSessions);
+        console.log('Remaining sessions:', response.data.remainingSessions);
+        
+        // Update the package in the packages array with the detailed information
+        setPackages(prevPackages => 
+          prevPackages.map(pkg => 
+            pkg.id === packageId ? response.data : pkg
+          )
+        );
+        
+        // Also update the services from the package
         const packageServices = response.data.packageItems
           .filter(item => item.completedCount < item.sessionCount)
           .map(item => item.service!)
@@ -202,7 +237,7 @@ export function AppointmentForm({
         setServices(packageServices);
       }
     } catch (error) {
-      console.error('Error loading package services:', error);
+      console.error('Error loading package details:', error);
     }
   };
 
@@ -256,6 +291,19 @@ export function AppointmentForm({
   };
 
   const handleFormSubmit = (data: any) => {
+    // Only allow submission from Step 3
+    if (currentStep !== 3) {
+      return;
+    }
+    
+    // Final validation check before submission
+    if (!hasAvailableSessions) {
+      setCustomErrors({ 
+        submit: 'Termin kann nicht erstellt werden. Das ausgewählte Paket hat keine verfügbaren Sitzungen mehr.' 
+      });
+      return;
+    }
+
     let submissionData = { ...data };
 
     if (isMultiple) {
@@ -288,6 +336,51 @@ export function AppointmentForm({
     return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
   };
 
+  // Step navigation functions
+  const validateStep = (step: number): boolean => {
+    const values = getValues();
+    const stepErrors: Record<string, string> = {};
+    
+    switch (step) {
+      case 1:
+        if (!values.patientId) stepErrors.patientId = 'Patient auswählen';
+        if (!values.packageId) stepErrors.packageId = 'Paket auswählen';
+        // Check if selected package has available sessions
+        if (values.packageId && !hasAvailableSessions) {
+          stepErrors.packageId = 'Das ausgewählte Paket hat keine verfügbaren Sitzungen mehr';
+        }
+        break;
+      case 2:
+        if (!values.serviceId) stepErrors.serviceId = 'Behandlung auswählen';
+        if (!values.staffId) stepErrors.staffId = 'Therapeut auswählen';
+        if (!values.roomId) stepErrors.roomId = 'Raum auswählen';
+        if (!values.scheduledDate) stepErrors.scheduledDate = 'Datum auswählen';
+        if (!values.startTime) stepErrors.startTime = 'Startzeit auswählen';
+        break;
+      case 3:
+        // Step 3 is review, no validation needed
+        return true;
+    }
+    
+    setCustomErrors(stepErrors);
+    return Object.keys(stepErrors).length === 0;
+  };
+
+  const nextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => Math.min(prev + 1, 3)); // Ensure we don't go beyond step 3
+    }
+  };
+
+  const prevStep = () => {
+    setCurrentStep(prev => prev - 1);
+  };
+
+  const resetForm = () => {
+    reset();
+    setCurrentStep(1);
+  };
+
   if (loadingData) {
     return (
       <Card className="p-6">
@@ -302,478 +395,472 @@ export function AppointmentForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-medium">{mode === 'create' ? 'Neuer Termin' : 'Termin bearbeiten'}</h2>
-        {allowMultiple && mode === 'create' && (
-          <div className="flex items-center gap-2">
-            <Checkbox
-              checked={isMultiple}
-              onChange={(e) => setIsMultiple(e.target.checked)}
-              id="multiple"
-            />
-            <label htmlFor="multiple" className="text-sm font-medium">
-              Mehrere Termine erstellen
-            </label>
-          </div>
-        )}
-      </div>
-
-      {/* Basic Information */}
-      <Card className="p-6">
-        <h3 className="text-lg font-medium mb-4">Grundinformationen</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Card className="max-w-4xl mx-auto">
+      <div className="p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <label className="block text-sm font-medium mb-2">
-              <User className="h-4 w-4 inline mr-2" />
-              Patient *
-            </label>
-            <SimpleSelect
-              value={watchedValues.patientId}
-              onChange={(e) => setValue('patientId', e.target.value)}
-              className={errors.patientId ? 'border-red-500' : ''}
-            >
-              <option value="">Patient auswählen</option>
-              {patients.map(patient => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.firstName} {patient.lastName} - {patient.phone}
-                </option>
-              ))}
-            </SimpleSelect>
-            {errors.patientId && (
-              <p className="text-xs text-red-500 mt-1">
-                {errors.patientId.message}
-              </p>
-            )}
+            <h2 className="text-2xl font-semibold">
+              {mode === 'create' ? 'Neuer Termin' : 'Termin bearbeiten'}
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Erstellen Sie einen neuen Behandlungstermin für einen Patienten
+            </p>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              <PackageIcon className="h-4 w-4 inline mr-2" />
-              Paket *
-            </label>
-            <SimpleSelect
-              value={watchedValues.packageId}
-              onChange={(e) => setValue('packageId', e.target.value)}
-              disabled={!watchedValues.patientId}
-              className={errors.packageId ? 'border-red-500' : ''}
+          {onCancel && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              className="gap-2"
             >
-              <option value="">Paket auswählen</option>
-              {packages.map(pkg => (
-                <option key={pkg.id} value={pkg.id}>
-                  {pkg.name} ({pkg.remainingSessions} verbleibende Sitzungen)
-                </option>
-              ))}
-            </SimpleSelect>
-            {errors.packageId && (
-              <p className="text-xs text-red-500 mt-1">
-                {errors.packageId.message}
-              </p>
-            )}
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+
+        {/* Progress Steps */}
+        <div className="flex items-center mb-8">
+          <div className="flex items-center flex-1">
+            {[1, 2, 3].map((step, index) => (
+              <React.Fragment key={step}>
+                <div className={clsx(
+                  'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium',
+                  currentStep >= step ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                )}>
+                  {step}
+                </div>
+                {index < 2 && (
+                  <div className="flex-1 h-1 mx-4 bg-muted">
+                    <div 
+                      className={clsx('h-full bg-primary transition-all duration-300',
+                        currentStep > step ? 'w-full' : 'w-0'
+                      )}
+                    />
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
           </div>
         </div>
 
-        {selectedPackage && (
-          <div className="mt-4 p-4 bg-muted rounded-lg">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-sm font-medium">{selectedPackage.name}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {selectedPackage.usedSessions} von {selectedPackage.totalSessions} Sitzungen verwendet
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium">
-                  Zahlungsstatus: <Badge variant={
-                    selectedPackage.paymentStatus === 'COMPLETED' ? 'success' :
-                    selectedPackage.paymentStatus === 'PARTIALLY_PAID' ? 'warning' : 'destructive'
-                  }>
-                    {selectedPackage.paymentStatus === 'COMPLETED' ? 'Vollzahlung' :
-                     selectedPackage.paymentStatus === 'PARTIALLY_PAID' ? 'Teilzahlung' : 'Nicht bezahlt'}
-                  </Badge>
-                </div>
-                {selectedPackage.remainingBalance && selectedPackage.remainingBalance > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Verbleibendes Guthaben: €{Number(selectedPackage.remainingBalance).toFixed(2)}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </Card>
-
-      {/* Single Appointment */}
-      {!isMultiple && (
-        <Card className="p-6">
-          <h3 className="text-lg font-medium mb-4">Termindetails</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Behandlung *</label>
-              <SimpleSelect
-                value={watchedValues.serviceId}
-                onChange={(e) => setValue('serviceId', e.target.value)}
-                disabled={!watchedValues.packageId}
-                className={errors.serviceId ? 'border-red-500' : ''}
+        <form onSubmit={handleSubmit(handleFormSubmit)}>
+          <AnimatePresence mode="wait">
+            {/* Step 1: Patient & Package Selection */}
+            {currentStep === 1 && (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                className="space-y-6"
               >
-                <option value="">Behandlung auswählen</option>
-                {services.map(service => (
-                  <option key={service.id} value={service.id}>
-                    {service.name} ({service.duration} Min)
-                  </option>
-                ))}
-              </SimpleSelect>
-              {errors.serviceId && (
-                <p className="text-xs text-red-500 mt-1">
-                  {errors.serviceId.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                <Calendar className="h-4 w-4 inline mr-2" />
-                Datum *
-              </label>
-              <Input
-                type="date"
-                value={watchedValues.scheduledDate}
-                onChange={(e) => setValue('scheduledDate', e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className={errors.scheduledDate ? 'border-red-500' : ''}
-              />
-              {errors.scheduledDate && (
-                <p className="text-xs text-red-500 mt-1">
-                  {errors.scheduledDate.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                <Clock className="h-4 w-4 inline mr-2" />
-                Startzeit *
-              </label>
-              <Input
-                type="time"
-                value={watchedValues.startTime}
-                onChange={(e) => setValue('startTime', e.target.value)}
-                className={errors.startTime ? 'border-red-500' : ''}
-              />
-              {errors.startTime && (
-                <p className="text-xs text-red-500 mt-1">
-                  {errors.startTime.message}
-                </p>
-              )}
-              {selectedService && watchedValues.startTime && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Endzeit: {calculateEndTime(watchedValues.startTime, selectedService.duration)}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Notizen</label>
-              <Input
-                value={watchedValues.notes}
-                onChange={(e) => setValue('notes', e.target.value)}
-                placeholder="Zusätzliche Notizen..."
-              />
-            </div>
-          </div>
-
-          {/* Availability Check */}
-          {checkingAvailability && (
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <p className="text-sm">Verfügbarkeit wird geprüft...</p>
-              </div>
-            </div>
-          )}
-
-          {availabilityError && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <div>
-                <h4 className="font-medium">Verfügbarkeitsfehler</h4>
-                <p className="text-sm">{availabilityError}</p>
-              </div>
-            </Alert>
-          )}
-
-          {availability && (
-            <div className="mt-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Verfügbare Therapeuten
-                  </label>
-                  <SimpleSelect
-                    value={watchedValues.staffId}
-                    onChange={(e) => setValue('staffId', e.target.value)}
-                    className={errors.staffId ? 'border-red-500' : ''}
-                  >
-                    <option value="">Therapeut auswählen</option>
-                    {filteredStaff.map(staffMember => (
-                      <option key={staffMember.id} value={staffMember.id}>
-                        {staffMember.firstName} {staffMember.lastName} ({staffMember.specialization})
-                      </option>
-                    ))}
-                  </SimpleSelect>
-                  {errors.staffId && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.staffId.message}
-                    </p>
-                  )}
-                  {availability.availableStaff.length === 0 && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      Keine Therapeuten verfügbar
-                    </p>
-                  )}
-                </div>
+                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Patient & Paket auswählen
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Patient Selection */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Patient *
+                        </label>
+                        <SimpleSelect
+                          value={watchedValues.patientId}
+                          onChange={(e) => setValue('patientId', e.target.value)}
+                          className={errors.patientId ? 'border-red-500' : ''}
+                        >
+                          <option value="">Patient auswählen</option>
+                          {patients.map(patient => (
+                            <option key={patient.id} value={patient.id}>
+                              {patient.firstName} {patient.lastName} - {patient.phone}
+                            </option>
+                          ))}
+                        </SimpleSelect>
+                        {errors.patientId && (
+                          <p className="text-xs text-red-500 mt-1">
+                            {errors.patientId.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    <MapPin className="h-4 w-4 inline mr-2" />
-                    Verfügbare Räume
-                  </label>
-                  <SimpleSelect
-                    value={watchedValues.roomId}
-                    onChange={(e) => setValue('roomId', e.target.value)}
-                    className={errors.roomId ? 'border-red-500' : ''}
-                  >
-                    <option value="">Raum auswählen</option>
-                    {filteredRooms.map(room => (
-                      <option key={room.id} value={room.id}>
-                        {room.name}
-                      </option>
-                    ))}
-                  </SimpleSelect>
-                  {errors.roomId && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.roomId.message}
-                    </p>
-                  )}
-                  {availability.availableRooms.length === 0 && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      Keine Räume verfügbar
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {availability.totalConflicts > 0 && (
-                <Alert variant="warning">
-                  <AlertCircle className="h-4 w-4" />
-                  <div>
-                    <h4 className="font-medium">Konflikte erkannt</h4>
-                    <p className="text-sm">
-                      {availability.totalConflicts} Konflikt(e) mit bestehenden Terminen gefunden.
-                    </p>
+                    {/* Package Selection */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Paket *
+                        </label>
+                        <SimpleSelect
+                          value={watchedValues.packageId}
+                          onChange={(e) => {
+                            setValue('packageId', e.target.value);
+                            // Clear custom errors when package changes
+                            setCustomErrors(prev => ({ ...prev, packageId: '' }));
+                          }}
+                          disabled={!watchedValues.patientId}
+                          className={(errors.packageId || customErrors.packageId) ? 'border-red-500' : ''}
+                        >
+                          <option value="">Paket auswählen</option>
+                          {packages.map(pkg => (
+                            <option key={pkg.id} value={pkg.id}>
+                              {pkg.name} ({pkg.remainingSessions} verbleibende Sitzungen)
+                            </option>
+                          ))}
+                        </SimpleSelect>
+                        {(errors.packageId || customErrors.packageId) && (
+                          <p className="text-xs text-red-500 mt-1">
+                            {errors.packageId?.message || customErrors.packageId}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </Alert>
-              )}
-            </div>
-          )}
-        </Card>
-      )}
 
-      {/* Multiple Appointments */}
-      {isMultiple && (
-        <Card className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Termine</h3>
-            <Button type="button" onClick={addAppointmentSlot} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Termin hinzufügen
-            </Button>
-          </div>
+                  {/* Package Details */}
+                  {selectedPackage && (
+                    <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-sm">{selectedPackage.name}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedPackage.usedSessions} von {selectedPackage.totalSessions} Sitzungen verwendet
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Verbleibende Sitzungen: {selectedPackage.remainingSessions}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant={
+                            selectedPackage.paymentStatus === 'COMPLETED' ? 'success' :
+                            selectedPackage.paymentStatus === 'PARTIALLY_PAID' ? 'warning' : 'destructive'
+                          }>
+                            {selectedPackage.paymentStatus === 'COMPLETED' ? 'Vollzahlung' :
+                             selectedPackage.paymentStatus === 'PARTIALLY_PAID' ? 'Teilzahlung' : 'Nicht bezahlt'}
+                          </Badge>
+                          {!hasAvailableSessions && (
+                            <Badge variant="destructive">
+                              Keine Sitzungen verfügbar
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {!hasAvailableSessions && (
+                        <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 text-red-600" />
+                            <p className="text-sm text-red-800 dark:text-red-200">
+                              Für dieses Paket sind keine Sitzungen mehr verfügbar. Bitte wählen Sie ein anderes Paket oder erstellen Sie ein neues Paket für den Patienten.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
 
-          {appointmentSlots.length === 0 && (
-            <div className="text-center py-8">
-              <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground">
-                Fügen Sie Termine hinzu, um zu beginnen
-              </p>
-            </div>
-          )}
+            {/* Step 2: Appointment Details */}
+            {currentStep === 2 && (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                className="space-y-6"
+              >
+                <div>
+                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Termindetails
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Service and Date/Time Selection */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Behandlung *
+                        </label>
+                        <SimpleSelect
+                          value={watchedValues.serviceId}
+                          onChange={(e) => setValue('serviceId', e.target.value)}
+                          disabled={!services.length}
+                          className={errors.serviceId ? 'border-red-500' : ''}
+                        >
+                          <option value="">Behandlung auswählen</option>
+                          {services.map(service => (
+                            <option key={service.id} value={service.id}>
+                              {service.name} ({service.duration} Min)
+                            </option>
+                          ))}
+                        </SimpleSelect>
+                        {errors.serviceId && (
+                          <p className="text-xs text-red-500 mt-1">
+                            {errors.serviceId.message}
+                          </p>
+                        )}
+                      </div>
 
-          {appointmentSlots.map((slot, index) => (
-            <Card key={index} className="p-4 mb-4 bg-muted/25">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-medium">Termin {index + 1}</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Datum *
+                          </label>
+                          <Input
+                            type="date"
+                            {...register('scheduledDate')}
+                            className={errors.scheduledDate ? 'border-red-500' : ''}
+                          />
+                          {errors.scheduledDate && (
+                            <p className="text-xs text-red-500 mt-1">
+                              {errors.scheduledDate.message}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Startzeit *
+                          </label>
+                          <Input
+                            type="time"
+                            {...register('startTime')}
+                            className={errors.startTime ? 'border-red-500' : ''}
+                          />
+                          {errors.startTime && (
+                            <p className="text-xs text-red-500 mt-1">
+                              {errors.startTime.message}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Room and Therapist Selection */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Raum *
+                        </label>
+                        <SimpleSelect
+                          value={watchedValues.roomId}
+                          onChange={(e) => setValue('roomId', e.target.value)}
+                          className={errors.roomId ? 'border-red-500' : ''}
+                        >
+                          <option value="">Raum auswählen</option>
+                          {filteredRooms.map(room => (
+                            <option key={room.id} value={room.id}>
+                              {room.name}
+                            </option>
+                          ))}
+                        </SimpleSelect>
+                        {errors.roomId && (
+                          <p className="text-xs text-red-500 mt-1">
+                            {errors.roomId.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Therapeut *
+                        </label>
+                        <SimpleSelect
+                          value={watchedValues.staffId}
+                          onChange={(e) => setValue('staffId', e.target.value)}
+                          className={errors.staffId ? 'border-red-500' : ''}
+                        >
+                          <option value="">Therapeut auswählen</option>
+                          {filteredStaff.map(staff => (
+                            <option key={staff.id} value={staff.id}>
+                              {staff.firstName} {staff.lastName}
+                            </option>
+                          ))}
+                        </SimpleSelect>
+                        {errors.staffId && (
+                          <p className="text-xs text-red-500 mt-1">
+                            {errors.staffId.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Notizen
+                        </label>
+                        <Input
+                          {...register('notes')}
+                          placeholder="Zusätzliche Notizen..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Availability Status */}
+                  {availability && (
+                    <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <span className="text-sm text-green-800 dark:text-green-200">
+                          {availability.availableStaff.length} Therapeuten und {availability.availableRooms.length} Räume verfügbar
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 3: Review & Confirmation */}
+            {currentStep === 3 && (
+              <motion.div
+                key="step3"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                className="space-y-6"
+              >
+                <div>
+                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5" />
+                    Zusammenfassung & Bestätigung
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <h4 className="font-medium mb-3">Terminübersicht</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Patient:</span>
+                          <span className="ml-2 font-medium">
+                            {patients.find(p => p.id === watchedValues.patientId)?.firstName}{' '}
+                            {patients.find(p => p.id === watchedValues.patientId)?.lastName}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Paket:</span>
+                          <span className="ml-2 font-medium">
+                            {packages.find(p => p.id === watchedValues.packageId)?.name}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Behandlung:</span>
+                          <span className="ml-2 font-medium">
+                            {services.find(s => s.id === watchedValues.serviceId)?.name}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Therapeut:</span>
+                          <span className="ml-2 font-medium">
+                            {filteredStaff.find(s => s.id === watchedValues.staffId)?.firstName}{' '}
+                            {filteredStaff.find(s => s.id === watchedValues.staffId)?.lastName}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Datum:</span>
+                          <span className="ml-2 font-medium">
+                            {watchedValues.scheduledDate ? new Date(watchedValues.scheduledDate).toLocaleDateString('de-DE') : ''}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Zeit:</span>
+                          <span className="ml-2 font-medium">
+                            {watchedValues.startTime} - {selectedService ? calculateEndTime(watchedValues.startTime, selectedService.duration) : ''}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Raum:</span>
+                          <span className="ml-2 font-medium">
+                            {filteredRooms.find(r => r.id === watchedValues.roomId)?.name}
+                          </span>
+                        </div>
+                        {watchedValues.notes && (
+                          <div className="md:col-span-2">
+                            <span className="text-muted-foreground">Notizen:</span>
+                            <span className="ml-2 font-medium">{watchedValues.notes}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Submit Error Display */}
+                    {customErrors.submit && (
+                      <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-red-600" />
+                          <p className="text-sm text-red-800 dark:text-red-200">
+                            {customErrors.submit}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between items-center pt-6">
+            <div>
+              {currentStep > 1 && (
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeAppointmentSlot(index)}
-                  className="text-red-600 hover:text-red-700"
+                  variant="outline"
+                  onClick={prevStep}
+                  className="gap-2"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <ArrowLeft className="h-4 w-4" />
+                  Zurück
                 </Button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Behandlung</label>
-                  <SimpleSelect
-                    value={slot.serviceId}
-                    onChange={(e) => updateAppointmentSlot(index, 'serviceId', e.target.value)}
-                  >
-                    <option value="">Behandlung auswählen</option>
-                    {services.map(service => (
-                      <option key={service.id} value={service.id}>
-                        {service.name} ({service.duration} Min)
-                      </option>
-                    ))}
-                  </SimpleSelect>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Datum</label>
-                  <Input
-                    type="date"
-                    value={slot.scheduledDate}
-                    onChange={(e) => updateAppointmentSlot(index, 'scheduledDate', e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Startzeit</label>
-                  <Input
-                    type="time"
-                    value={slot.startTime}
-                    onChange={(e) => updateAppointmentSlot(index, 'startTime', e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Therapeut</label>
-                  <SimpleSelect
-                    value={slot.staffId}
-                    onChange={(e) => updateAppointmentSlot(index, 'staffId', e.target.value)}
-                  >
-                    <option value="">Therapeut auswählen</option>
-                    {staff.map(staffMember => (
-                      <option key={staffMember.id} value={staffMember.id}>
-                        {staffMember.firstName} {staffMember.lastName}
-                      </option>
-                    ))}
-                  </SimpleSelect>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Raum</label>
-                  <SimpleSelect
-                    value={slot.roomId}
-                    onChange={(e) => updateAppointmentSlot(index, 'roomId', e.target.value)}
-                  >
-                    <option value="">Raum auswählen</option>
-                    {rooms.map(room => (
-                      <option key={room.id} value={room.id}>
-                        {room.name}
-                      </option>
-                    ))}
-                  </SimpleSelect>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Notizen</label>
-                  <Input
-                    value={slot.notes || ''}
-                    onChange={(e) => updateAppointmentSlot(index, 'notes', e.target.value)}
-                    placeholder="Zusätzliche Notizen..."
-                  />
-                </div>
-              </div>
-            </Card>
-          ))}
-        </Card>
-      )}
-
-      {/* Payment Section */}
-      <Card className="p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Checkbox
-            checked={includePayment}
-            onChange={(e) => setIncludePayment(e.target.checked)}
-            id="payment"
-          />
-          <label htmlFor="payment" className="text-sm font-medium">
-            <CreditCard className="h-4 w-4 inline mr-2" />
-            Zahlung hinzufügen
-          </label>
-        </div>
-
-        {includePayment && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Betrag *</label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={watchedValues.payment?.amount || ''}
-                onChange={(e) => setValue('payment.amount', parseFloat(e.target.value) || 0)}
-              />
+              )}
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Zahlungsmethode *</label>
-              <SimpleSelect 
-                value={watchedValues.payment?.paymentMethod || ''}
-                onChange={(e) => setValue('payment.paymentMethod', e.target.value)}
-              >
-                <option value="">Zahlungsmethode auswählen</option>
-                <option value="CASH">Bar</option>
-                <option value="CARD">Karte</option>
-                <option value="BANK_TRANSFER">Überweisung</option>
-              </SimpleSelect>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Bezahlte Sitzungen</label>
-              <Input
-                type="number"
-                min="1"
-                placeholder="1"
-                value={watchedValues.payment?.paidSessionsCount || ''}
-                onChange={(e) => setValue('payment.paidSessionsCount', parseInt(e.target.value) || 1)}
-              />
+            
+            <div className="flex gap-2">
+              {currentStep < 3 ? (
+                <Button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    nextStep();
+                  }}
+                  disabled={
+                    (currentStep === 1 && (!watchedValues.patientId || !watchedValues.packageId || !hasAvailableSessions)) ||
+                    (currentStep === 2 && (!watchedValues.serviceId || !watchedValues.staffId || !watchedValues.roomId || !watchedValues.scheduledDate || !watchedValues.startTime))
+                  }
+                  className="gap-2"
+                >
+                  Weiter
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  disabled={loading || isSubmitting || !hasAvailableSessions}
+                  className="gap-2"
+                >
+                  {loading || isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Wird gespeichert...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      {mode === 'create' ? 'Termin erstellen' : 'Änderungen speichern'}
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
-        )}
-      </Card>
-
-      {/* Form Actions */}
-      <div className="flex justify-end gap-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Abbrechen
-        </Button>
-        <Button 
-          type="submit" 
-          loading={loading}
-          disabled={
-            (!availability && !isMultiple) ||
-            (availability && availability.availableStaff.length === 0) ||
-            (availability && availability.availableRooms.length === 0)
-          }
-        >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              {mode === 'create' ? 'Erstelle...' : 'Speichere...'}
-            </>
-          ) : (
-            <>
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              {mode === 'create' ? 'Termin erstellen' : 'Änderungen speichern'}
-            </>
-          )}
-        </Button>
+        </form>
       </div>
-    </form>
+    </Card>
   );
 }

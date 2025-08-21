@@ -3,6 +3,7 @@ import { AuthRequest } from '../types/index.js';
 import prisma from '../utils/db.js';
 import { AppointmentStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { calculateEndTime, checkTimeConflict, validateAppointmentTime } from '../utils/appointmentUtils.js';
+import { PackageUpdater } from '../utils/packageUpdater.js';
 
 export const appointmentController = {
   // Get all appointments with filters
@@ -256,6 +257,42 @@ export const appointmentController = {
         });
       }
 
+      // Check for duplicate appointment (same patient at same date and time - regardless of package, room, or therapist)
+      const existingAppointment = await prisma.appointment.findFirst({
+        where: {
+          patientId,
+          scheduledDate: new Date(scheduledDate),
+          startTime,
+          status: { not: 'CANCELLED' } // Exclude cancelled appointments
+        },
+        include: {
+          patient: {
+            select: {
+              firstName: true,
+              lastName: true
+            }
+          },
+          service: {
+            select: {
+              name: true
+            }
+          },
+          staff: {
+            select: {
+              firstName: true,
+              lastName: true
+            }
+          }
+        }
+      });
+
+      if (existingAppointment) {
+        return res.status(400).json({
+          success: false,
+          error: `Der Patient ${existingAppointment.patient.firstName} ${existingAppointment.patient.lastName} hat bereits einen Termin am ${new Date(scheduledDate).toLocaleDateString('de-DE')} um ${startTime} Uhr (${existingAppointment.service.name} mit ${existingAppointment.staff.firstName} ${existingAppointment.staff.lastName}). Ein Patient kann nicht zwei Termine zur gleichen Zeit haben.`
+        });
+      }
+
       // Create appointment
       const appointment = await prisma.appointment.create({
         data: {
@@ -306,6 +343,11 @@ export const appointmentController = {
 
         // Update package payment status
         await updatePackagePaymentStatus(packageId);
+      }
+
+      // Update package session counts after creating appointment
+      if (packageId) {
+        await PackageUpdater.updatePackageSessions(packageId);
       }
 
       res.status(201).json({
@@ -392,6 +434,34 @@ export const appointmentController = {
             continue;
           }
 
+          // Check for duplicate appointment (same patient at same date and time - regardless of package, room, or therapist)
+          const existingAppointment = await prisma.appointment.findFirst({
+            where: {
+              patientId,
+              scheduledDate: new Date(appt.scheduledDate),
+              startTime: appt.startTime,
+              status: { not: 'CANCELLED' }
+            },
+            include: {
+              service: {
+                select: {
+                  name: true
+                }
+              },
+              staff: {
+                select: {
+                  firstName: true,
+                  lastName: true
+                }
+              }
+            }
+          });
+
+          if (existingAppointment) {
+            errors.push(`Patient hat bereits einen Termin am ${new Date(appt.scheduledDate).toLocaleDateString('de-DE')} um ${appt.startTime} Uhr (${existingAppointment.service.name} mit ${existingAppointment.staff.firstName} ${existingAppointment.staff.lastName})`);
+            continue;
+          }
+
           // Create appointment
           const created = await prisma.appointment.create({
             data: {
@@ -434,6 +504,11 @@ export const appointmentController = {
         });
 
         await updatePackagePaymentStatus(packageId);
+      }
+
+      // Update package session counts after creating multiple appointments
+      if (packageId && createdAppointments.length > 0) {
+        await PackageUpdater.updatePackageSessions(packageId);
       }
 
       res.status(201).json({
@@ -480,19 +555,6 @@ export const appointmentController = {
       // Handle status change
       if (status) {
         updateData.status = status;
-
-        // Update package item completed count if completing appointment
-        if (status === 'COMPLETED' && existing.status !== 'COMPLETED' && existing.packageId) {
-          await prisma.packageItem.updateMany({
-            where: {
-              packageId: existing.packageId,
-              serviceId: existing.serviceId
-            },
-            data: {
-              completedCount: { increment: 1 }
-            }
-          });
-        }
       }
 
       // Handle rescheduling
@@ -553,6 +615,11 @@ export const appointmentController = {
         }
       });
 
+      // Update package session counts after status change
+      if (existing.packageId) {
+        await PackageUpdater.updatePackageSessions(existing.packageId);
+      }
+
       res.json({
         success: true,
         data: updated
@@ -590,6 +657,11 @@ export const appointmentController = {
           modifiedById: req.user!.id
         }
       });
+
+      // Update package session counts after cancellation
+      if (appointment.packageId) {
+        await PackageUpdater.updatePackageSessions(appointment.packageId);
+      }
 
       res.json({
         success: true,

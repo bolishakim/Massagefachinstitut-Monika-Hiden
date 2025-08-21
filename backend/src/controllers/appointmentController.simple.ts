@@ -314,6 +314,42 @@ export const appointmentController = {
         }
       }
 
+      // Check for duplicate appointment (same patient at same date and time - regardless of package, room, or therapist)
+      const existingAppointment = await prisma.appointment.findFirst({
+        where: {
+          patientId,
+          scheduledDate: new Date(scheduledDate),
+          startTime,
+          status: { not: 'CANCELLED' } // Exclude cancelled appointments
+        },
+        include: {
+          patient: {
+            select: {
+              firstName: true,
+              lastName: true
+            }
+          },
+          service: {
+            select: {
+              name: true
+            }
+          },
+          staff: {
+            select: {
+              firstName: true,
+              lastName: true
+            }
+          }
+        }
+      });
+
+      if (existingAppointment) {
+        return res.status(400).json({
+          success: false,
+          error: `Der Patient ${existingAppointment.patient.firstName} ${existingAppointment.patient.lastName} hat bereits einen Termin am ${new Date(scheduledDate).toLocaleDateString('de-DE')} um ${startTime} Uhr (${existingAppointment.service.name} mit ${existingAppointment.staff.firstName} ${existingAppointment.staff.lastName}). Ein Patient kann nicht zwei Termine zur gleichen Zeit haben.`
+        });
+      }
+
       // Calculate end time
       const [hours, minutes] = startTime.split(':').map(Number);
       const totalMinutes = hours * 60 + minutes + service.duration;

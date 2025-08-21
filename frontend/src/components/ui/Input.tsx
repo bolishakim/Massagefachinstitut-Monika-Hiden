@@ -14,7 +14,10 @@ type InputProps = BaseInputProps & (
   | (React.TextareaHTMLAttributes<HTMLTextAreaElement> & { multiline: true })
 );
 
-export function Input({
+export const Input = React.forwardRef<
+  HTMLInputElement | HTMLTextAreaElement,
+  InputProps
+>(({
   label,
   error,
   helperText,
@@ -23,7 +26,7 @@ export function Input({
   className,
   id,
   ...props
-}: InputProps) {
+}, ref) => {
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
 
   const baseClassName = clsx(
@@ -53,12 +56,14 @@ export function Input({
           id={inputId}
           rows={rows}
           className={baseClassName}
+          ref={ref as React.Ref<HTMLTextAreaElement>}
           {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
         />
       ) : (
         <input
           id={inputId}
           className={baseClassName}
+          ref={ref as React.Ref<HTMLInputElement>}
           {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
         />
       )}
@@ -70,4 +75,6 @@ export function Input({
       )}
     </div>
   );
-}
+});
+
+Input.displayName = 'Input';

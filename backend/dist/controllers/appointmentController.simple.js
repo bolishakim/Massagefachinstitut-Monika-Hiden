@@ -224,6 +224,50 @@ export const appointmentController = {
                     error: 'Service not found'
                 });
             }
+            // Validate package session limit if appointment is linked to a package
+            if (packageId) {
+                // Get package with its items to check session limits
+                const packageData = await prisma.package.findUnique({
+                    where: { id: packageId },
+                    include: {
+                        packageItems: {
+                            where: { serviceId },
+                            select: {
+                                sessionCount: true
+                            }
+                        }
+                    }
+                });
+                if (!packageData) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Package not found'
+                    });
+                }
+                // Find the package item for this service
+                const packageItem = packageData.packageItems.find(item => item);
+                if (!packageItem) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'This service is not included in the selected package'
+                    });
+                }
+                // Count existing active appointments (all statuses except CANCELLED) for this package and service
+                const activeAppointmentsCount = await prisma.appointment.count({
+                    where: {
+                        packageId,
+                        serviceId,
+                        status: { not: 'CANCELLED' }
+                    }
+                });
+                // Check if adding this appointment would exceed the session limit
+                if (activeAppointmentsCount >= packageItem.sessionCount) {
+                    return res.status(400).json({
+                        success: false,
+                        error: `Termin kann nicht erstellt werden. Dieses Paket erlaubt nur ${packageItem.sessionCount} Sitzung(en) für diese Behandlung. Es existieren bereits ${activeAppointmentsCount} aktive Termine. Bitte stornieren Sie zuerst einen bestehenden Termin oder wenden Sie sich an die Verwaltung.`
+                    });
+                }
+            }
             // Calculate end time
             const [hours, minutes] = startTime.split(':').map(Number);
             const totalMinutes = hours * 60 + minutes + service.duration;
@@ -326,13 +370,14 @@ export const appointmentController = {
                 }
                 // Calculate new end time based on the new start time and original duration
                 const [hours, minutes] = processedData.startTime.split(':').map(Number);
-                const totalMinutes = hours * 60 + minutes + appointmentWithService.service.duration;
+                const duration = appointmentWithService.service.duration || 30; // Default to 30 minutes if not set
+                const totalMinutes = hours * 60 + minutes + duration;
                 const endHours = Math.floor(totalMinutes / 60);
                 const endMinutes = totalMinutes % 60;
                 processedData.endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
             }
-            // Validate if trying to mark appointment as completed
-            if (processedData.status === 'COMPLETED') {
+            // Validate if trying to mark appointment as completed or no show
+            if (processedData.status === 'COMPLETED' || processedData.status === 'NO_SHOW') {
                 // First fetch the appointment to check its scheduled date and time
                 const existingAppointment = await prisma.appointment.findUnique({
                     where: { id },
@@ -348,16 +393,23 @@ export const appointmentController = {
                         error: 'Termin nicht gefunden'
                     });
                 }
-                // Combine scheduled date with end time to get the actual appointment end datetime
+                // For COMPLETED, use end time; for NO_SHOW, use start time
                 const appointmentDate = new Date(existingAppointment.scheduledDate);
-                const [endHours, endMinutes] = existingAppointment.endTime.split(':').map(Number);
-                appointmentDate.setHours(endHours, endMinutes, 0, 0);
+                if (processedData.status === 'COMPLETED') {
+                    const [endHours, endMinutes] = existingAppointment.endTime.split(':').map(Number);
+                    appointmentDate.setHours(endHours, endMinutes, 0, 0);
+                }
+                else if (processedData.status === 'NO_SHOW') {
+                    const [startHours, startMinutes] = existingAppointment.startTime.split(':').map(Number);
+                    appointmentDate.setHours(startHours, startMinutes, 0, 0);
+                }
                 const now = new Date();
-                // Check if appointment end time is in the future
+                // Check if appointment time is in the future
                 if (appointmentDate > now) {
+                    const statusText = processedData.status === 'COMPLETED' ? 'abgeschlossen' : '"No Show"';
                     return res.status(400).json({
                         success: false,
-                        error: 'Ein zukünftiger Termin kann nicht als abgeschlossen markiert werden.'
+                        error: `Ein zukünftiger Termin kann nicht als ${statusText} markiert werden.`
                     });
                 }
             }

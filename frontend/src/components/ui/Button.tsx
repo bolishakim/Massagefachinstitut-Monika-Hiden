@@ -40,20 +40,21 @@ export function Button({
   };
 
   return (
-    <motion.button
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+    <button
       className={clsx(
         baseClasses,
         variantClasses[variant],
         sizeClasses[size],
+        'hover:scale-[1.02] active:scale-[0.98] transition-transform',
         className
       )}
       disabled={disabled || loading}
       {...props}
     >
-      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      {children}
-    </motion.button>
+      <span className="inline-flex items-center">
+        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {children}
+      </span>
+    </button>
   );
 }
