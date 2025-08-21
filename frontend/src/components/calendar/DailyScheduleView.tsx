@@ -35,6 +35,8 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
   React.useEffect(() => {
     if (scheduleData?.appointments && scheduleData.appointments.length > 0) {
       console.log('Sample appointment data:', scheduleData.appointments[0]);
+      const occupied = getOccupiedSlots(scheduleData.appointments);
+      console.log('Occupied slots map:', Array.from(occupied.entries()));
     }
   }, [scheduleData?.appointments]);
 
@@ -84,18 +86,42 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
     return slots;
   }, [calendarSettings]);
 
+  // Generate all occupied slots for appointments
+  const getOccupiedSlots = (appointments: Appointment[]): Map<string, { staffId: string; appointment: Appointment }> => {
+    const occupiedSlots = new Map();
+    
+    appointments.forEach(apt => {
+      if (apt.status === 'CANCELLED') return;
+      
+      const duration = apt.service?.duration || 30; // Default to 30 minutes
+      const slotsNeeded = Math.ceil(duration / 15); // Number of 15-minute slots needed
+      
+      const startTime = parse(apt.startTime, 'HH:mm', new Date());
+      
+      // Mark all slots that this appointment occupies
+      for (let i = 0; i < slotsNeeded; i++) {
+        const slotTime = addMinutes(startTime, i * 15);
+        const slotKey = `${apt.staffId}-${format(slotTime, 'HH:mm')}`;
+        occupiedSlots.set(slotKey, { staffId: apt.staffId, appointment: apt });
+      }
+    });
+    
+    return occupiedSlots;
+  };
+
   // Get slot status for a specific staff member and time
   const getSlotStatus = (
     staff: StaffMember, 
     timeSlot: string,
     appointments: Appointment[],
     schedules: any[],
-    leaves: any[]
+    leaves: any[],
+    occupiedSlots: Map<string, { staffId: string; appointment: Appointment }>
   ): { status: SlotStatus; appointment?: Appointment; info?: string } => {
     // Check if staff is on leave
     const onLeave = leaves.some(leave => 
       leave.staffId === staff.id && 
-      isSameDay(new Date(leave.startDate), date) // Simplified check
+      isSameDay(new Date(leave.startDate), date)
     );
     if (onLeave) {
       return { status: 'unavailable', info: 'Abwesend' };
@@ -129,37 +155,12 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
       }
     }
 
-    // Check for appointments that overlap with this time slot
-    const appointment = appointments.find(apt => {
-      if (apt.staffId !== staff.id || apt.status === 'CANCELLED') {
-        return false;
-      }
-
-      // Parse appointment start time
-      const aptStart = parse(apt.startTime, 'HH:mm', new Date());
-      
-      // Calculate appointment end time based on service duration
-      let aptEnd;
-      if (apt.endTime) {
-        // Use endTime if available
-        aptEnd = parse(apt.endTime, 'HH:mm', new Date());
-      } else if (apt.service?.duration) {
-        // Calculate end time from service duration
-        aptEnd = addMinutes(aptStart, apt.service.duration);
-      } else {
-        // Default to 30 minutes if no duration info
-        aptEnd = addMinutes(aptStart, 30);
-      }
-      
-      const slotStart = parse(timeSlot, 'HH:mm', new Date());
-      const slotEnd = addMinutes(slotStart, calendarSettings?.timeSlotInterval || 15);
-
-      // Check if appointment overlaps with this time slot
-      return (aptStart < slotEnd && aptEnd > slotStart);
-    });
-
-    if (appointment) {
-      return { status: 'booked', appointment };
+    // Check if this slot is occupied by an appointment
+    const slotKey = `${staff.id}-${timeSlot}`;
+    const occupiedSlot = occupiedSlots.get(slotKey);
+    
+    if (occupiedSlot) {
+      return { status: 'booked', appointment: occupiedSlot.appointment };
     }
 
     return { status: 'available' };
@@ -196,6 +197,9 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
   }
 
   const { staffMembers, schedules, leaves, appointments } = scheduleData;
+
+  // Calculate occupied slots once for all appointments
+  const occupiedSlots = getOccupiedSlots(appointments);
 
   return (
     <Card className="p-4 overflow-hidden">
@@ -250,7 +254,7 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
                 
                 {/* Staff Slots */}
                 {staffMembers.map(staff => {
-                  const slot = getSlotStatus(staff, timeSlot, appointments, schedules, leaves);
+                  const slot = getSlotStatus(staff, timeSlot, appointments, schedules, leaves, occupiedSlots);
                   
                   return (
                     <div
