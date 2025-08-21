@@ -31,6 +31,13 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
     loadScheduleData();
   }, [date, userId]);
 
+  // Debug log appointments to see their structure (moved to top level)
+  React.useEffect(() => {
+    if (scheduleData?.appointments && scheduleData.appointments.length > 0) {
+      console.log('Sample appointment data:', scheduleData.appointments[0]);
+    }
+  }, [scheduleData?.appointments]);
+
   const loadScheduleData = async () => {
     try {
       setLoading(true);
@@ -189,13 +196,6 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
   }
 
   const { staffMembers, schedules, leaves, appointments } = scheduleData;
-
-  // Debug log appointments to see their structure
-  React.useEffect(() => {
-    if (appointments.length > 0) {
-      console.log('Sample appointment data:', appointments[0]);
-    }
-  }, [appointments]);
 
   return (
     <Card className="p-4 overflow-hidden">
