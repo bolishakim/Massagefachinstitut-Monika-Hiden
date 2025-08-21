@@ -128,9 +128,22 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
         return false;
       }
 
-      // Parse appointment start and end times
+      // Parse appointment start time
       const aptStart = parse(apt.startTime, 'HH:mm', new Date());
-      const aptEnd = parse(apt.endTime, 'HH:mm', new Date());
+      
+      // Calculate appointment end time based on service duration
+      let aptEnd;
+      if (apt.endTime) {
+        // Use endTime if available
+        aptEnd = parse(apt.endTime, 'HH:mm', new Date());
+      } else if (apt.service?.duration) {
+        // Calculate end time from service duration
+        aptEnd = addMinutes(aptStart, apt.service.duration);
+      } else {
+        // Default to 30 minutes if no duration info
+        aptEnd = addMinutes(aptStart, 30);
+      }
+      
       const slotStart = parse(timeSlot, 'HH:mm', new Date());
       const slotEnd = addMinutes(slotStart, calendarSettings?.timeSlotInterval || 15);
 
@@ -176,6 +189,13 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
   }
 
   const { staffMembers, schedules, leaves, appointments } = scheduleData;
+
+  // Debug log appointments to see their structure
+  React.useEffect(() => {
+    if (appointments.length > 0) {
+      console.log('Sample appointment data:', appointments[0]);
+    }
+  }, [appointments]);
 
   return (
     <Card className="p-4 overflow-hidden">
@@ -270,7 +290,7 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
                                   {slot.appointment.patient?.firstName} {slot.appointment.patient?.lastName}
                                 </div>
                                 <div className="text-xs text-blue-600 dark:text-blue-300 truncate">
-                                  {slot.appointment.service?.name}
+                                  {slot.appointment.service?.name} ({slot.appointment.service?.duration || 30}min)
                                 </div>
                               </>
                             ) : (
