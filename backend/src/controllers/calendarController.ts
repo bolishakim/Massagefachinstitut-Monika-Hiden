@@ -28,7 +28,7 @@ export const calendarController = {
             userId: null,
             workingHoursStart: "08:00",
             workingHoursEnd: "20:00",
-            timeSlotInterval: 30,
+            timeSlotInterval: 15,
             showWeekends: false,
             defaultView: "day",
             showStaffAvailability: true,

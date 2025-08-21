@@ -122,12 +122,21 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
       }
     }
 
-    // Check for appointments
-    const appointment = appointments.find(apt => 
-      apt.staffId === staff.id &&
-      apt.startTime === timeSlot &&
-      apt.status !== 'CANCELLED'
-    );
+    // Check for appointments that overlap with this time slot
+    const appointment = appointments.find(apt => {
+      if (apt.staffId !== staff.id || apt.status === 'CANCELLED') {
+        return false;
+      }
+
+      // Parse appointment start and end times
+      const aptStart = parse(apt.startTime, 'HH:mm', new Date());
+      const aptEnd = parse(apt.endTime, 'HH:mm', new Date());
+      const slotStart = parse(timeSlot, 'HH:mm', new Date());
+      const slotEnd = addMinutes(slotStart, calendarSettings?.timeSlotInterval || 15);
+
+      // Check if appointment overlaps with this time slot
+      return (aptStart < slotEnd && aptEnd > slotStart);
+    });
 
     if (appointment) {
       return { status: 'booked', appointment };
@@ -186,19 +195,19 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
           <div className="grid gap-2 p-2" style={{gridTemplateColumns: `160px repeat(${staffMembers.length}, 220px)`}}>
             {/* Time Column Header */}
             <div className="sticky top-0 bg-background z-10 pb-3">
-              <div className="flex items-center justify-center gap-2 font-semibold bg-secondary/30 p-4 rounded-lg h-20">
-                <Clock className="h-5 w-5" />
-                <span className="text-base">Zeit</span>
+              <div className="flex items-center justify-center gap-2 font-semibold bg-secondary/30 p-3 rounded-lg h-16">
+                <Clock className="h-4 w-4" />
+                <span className="text-sm">Zeit</span>
               </div>
             </div>
             
             {/* Staff Headers */}
             {staffMembers.map(staff => (
               <div key={staff.id} className="sticky top-0 bg-background z-10 pb-3">
-                <div className="p-4 bg-muted rounded-lg h-20 flex flex-col justify-center">
-                  <div className="flex items-center gap-2 mb-2">
-                    <User className="h-4 w-4" />
-                    <span className="font-semibold text-sm">
+                <div className="p-3 bg-muted rounded-lg h-16 flex flex-col justify-center">
+                  <div className="flex items-center gap-2 mb-1">
+                    <User className="h-3 w-3" />
+                    <span className="font-semibold text-xs">
                       {staff.firstName} {staff.lastName}
                     </span>
                   </div>
@@ -215,7 +224,7 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
             {timeSlots.map(timeSlot => (
               <React.Fragment key={timeSlot}>
                 {/* Time Label */}
-                <div className="flex items-center justify-center bg-secondary/20 rounded-lg p-3 h-20 font-medium text-base">
+                <div className="flex items-center justify-center bg-secondary/20 rounded-lg p-2 h-12 font-medium text-sm">
                   {timeSlot}
                 </div>
                 
@@ -226,7 +235,7 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
                   return (
                     <div
                       key={`${staff.id}-${timeSlot}`}
-                      className={`p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer h-20 flex items-center justify-center ${
+                      className={`p-2 rounded-lg border transition-all duration-200 cursor-pointer h-12 flex items-center justify-center ${
                         slot.status === 'available' 
                           ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30 hover:scale-105'
                           : slot.status === 'booked'
@@ -247,34 +256,43 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
                     >
                       <div className="text-center w-full">
                         {slot.status === 'available' && (
-                          <div className="text-sm text-green-700 dark:text-green-300 font-semibold">
-                            Verfügbar
+                          <div className="text-xs text-green-700 dark:text-green-300 font-semibold">
+                            Frei
                           </div>
                         )}
                         
                         {slot.status === 'booked' && slot.appointment && (
-                          <div className="space-y-1">
-                            <div className="text-sm font-semibold text-blue-800 dark:text-blue-200">
-                              {slot.appointment.patient?.firstName} {slot.appointment.patient?.lastName}
-                            </div>
-                            <div className="text-xs text-blue-600 dark:text-blue-300">
-                              {slot.appointment.service?.name}
-                            </div>
+                          <div className="space-y-0">
+                            {/* Show patient name only in the first slot of the appointment */}
+                            {slot.appointment.startTime === timeSlot ? (
+                              <>
+                                <div className="text-xs font-semibold text-blue-800 dark:text-blue-200 truncate">
+                                  {slot.appointment.patient?.firstName} {slot.appointment.patient?.lastName}
+                                </div>
+                                <div className="text-xs text-blue-600 dark:text-blue-300 truncate">
+                                  {slot.appointment.service?.name}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-xs text-blue-600 dark:text-blue-300">
+                                ···
+                              </div>
+                            )}
                           </div>
                         )}
                         
                         {slot.status === 'break' && (
-                          <div className="flex items-center justify-center gap-2">
-                            <Coffee className="h-4 w-4 text-yellow-600" />
-                            <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
-                              {slot.info || 'Pause'}
+                          <div className="flex items-center justify-center gap-1">
+                            <Coffee className="h-3 w-3 text-yellow-600" />
+                            <span className="text-xs font-medium text-yellow-700 dark:text-yellow-300">
+                              Pause
                             </span>
                           </div>
                         )}
                         
                         {slot.status === 'unavailable' && (
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {slot.info || 'Nicht geplant'}
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            -
                           </div>
                         )}
                       </div>
