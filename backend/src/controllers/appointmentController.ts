@@ -5,6 +5,17 @@ import { AppointmentStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { calculateEndTime, checkTimeConflict, validateAppointmentTime } from '../utils/appointmentUtils.js';
 import { PackageUpdater } from '../utils/packageUpdater.js';
 
+// Helper function to convert time string (HH:MM) to minutes since midnight
+function timeToMinutes(timeString: string): number {
+  const [hours, minutes] = timeString.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+// Helper function to check if two time intervals overlap
+function intervalsOverlap(start1: number, end1: number, start2: number, end2: number): boolean {
+  return start1 < end2 && end1 > start2;
+}
+
 export const appointmentController = {
   // Get all appointments with filters
   getAllAppointments: async (req: AuthRequest, res: Response) => {
@@ -257,13 +268,16 @@ export const appointmentController = {
         });
       }
 
-      // Check for duplicate appointment (same patient at same date and time - regardless of package, room, or therapist)
-      const existingAppointment = await prisma.appointment.findFirst({
+      // Check for overlapping appointments for the same patient (same patient cannot be in two places at once)
+      // Convert time strings to minutes for accurate comparison
+      const startMinutes = timeToMinutes(startTime);
+      const endMinutes = timeToMinutes(endTime);
+      
+      const patientAppointments = await prisma.appointment.findMany({
         where: {
           patientId,
           scheduledDate: new Date(scheduledDate),
-          startTime,
-          status: { not: 'CANCELLED' } // Exclude cancelled appointments
+          status: { not: 'CANCELLED' }, // Exclude cancelled appointments
         },
         include: {
           patient: {
@@ -286,12 +300,29 @@ export const appointmentController = {
         }
       });
 
-      if (existingAppointment) {
-        return res.status(400).json({
-          success: false,
-          error: `Der Patient ${existingAppointment.patient.firstName} ${existingAppointment.patient.lastName} hat bereits einen Termin am ${new Date(scheduledDate).toLocaleDateString('de-DE')} um ${startTime} Uhr (${existingAppointment.service.name} mit ${existingAppointment.staff.firstName} ${existingAppointment.staff.lastName}). Ein Patient kann nicht zwei Termine zur gleichen Zeit haben.`
-        });
+      // Check each existing appointment for overlap
+      console.log(`[OVERLAP CHECK] Checking ${patientAppointments.length} existing appointments for patient ${patientId}`);
+      console.log(`[OVERLAP CHECK] New appointment: ${startTime}-${endTime} (${startMinutes}-${endMinutes} minutes)`);
+      
+      for (const existingAppt of patientAppointments) {
+        const existingStartMinutes = timeToMinutes(existingAppt.startTime);
+        const existingEndMinutes = timeToMinutes(existingAppt.endTime);
+        
+        console.log(`[OVERLAP CHECK] Existing: ${existingAppt.startTime}-${existingAppt.endTime} (${existingStartMinutes}-${existingEndMinutes} minutes)`);
+        
+        const overlaps = intervalsOverlap(startMinutes, endMinutes, existingStartMinutes, existingEndMinutes);
+        console.log(`[OVERLAP CHECK] Overlap result: ${overlaps}`);
+        
+        if (overlaps) {
+          console.log(`[OVERLAP CHECK] BLOCKING appointment creation due to overlap`);
+          return res.status(400).json({
+            success: false,
+            error: `Der Patient ${existingAppt.patient.firstName} ${existingAppt.patient.lastName} hat bereits einen überlappenden Termin am ${new Date(scheduledDate).toLocaleDateString('de-DE')} von ${existingAppt.startTime} bis ${existingAppt.endTime} Uhr (${existingAppt.service.name} mit ${existingAppt.staff.firstName} ${existingAppt.staff.lastName}). Ein Patient kann nicht gleichzeitig in zwei Terminen sein.`
+          });
+        }
       }
+      
+      console.log(`[OVERLAP CHECK] No overlaps found, proceeding with appointment creation`);
 
       // Create appointment
       const appointment = await prisma.appointment.create({
@@ -434,13 +465,16 @@ export const appointmentController = {
             continue;
           }
 
-          // Check for duplicate appointment (same patient at same date and time - regardless of package, room, or therapist)
-          const existingAppointment = await prisma.appointment.findFirst({
+          // Check for overlapping appointments for the same patient (same patient cannot be in two places at once)
+          // Convert time strings to minutes for accurate comparison
+          const apptStartMinutes = timeToMinutes(appt.startTime);
+          const apptEndMinutes = timeToMinutes(endTime);
+          
+          const patientAppointments = await prisma.appointment.findMany({
             where: {
               patientId,
               scheduledDate: new Date(appt.scheduledDate),
-              startTime: appt.startTime,
-              status: { not: 'CANCELLED' }
+              status: { not: 'CANCELLED' },
             },
             include: {
               service: {
@@ -457,8 +491,20 @@ export const appointmentController = {
             }
           });
 
-          if (existingAppointment) {
-            errors.push(`Patient hat bereits einen Termin am ${new Date(appt.scheduledDate).toLocaleDateString('de-DE')} um ${appt.startTime} Uhr (${existingAppointment.service.name} mit ${existingAppointment.staff.firstName} ${existingAppointment.staff.lastName})`);
+          // Check each existing appointment for overlap
+          let hasOverlap = false;
+          for (const existingAppt of patientAppointments) {
+            const existingStartMinutes = timeToMinutes(existingAppt.startTime);
+            const existingEndMinutes = timeToMinutes(existingAppt.endTime);
+            
+            if (intervalsOverlap(apptStartMinutes, apptEndMinutes, existingStartMinutes, existingEndMinutes)) {
+              errors.push(`Patient hat bereits einen überlappenden Termin am ${new Date(appt.scheduledDate).toLocaleDateString('de-DE')} von ${existingAppt.startTime} bis ${existingAppt.endTime} Uhr (${existingAppt.service.name} mit ${existingAppt.staff.firstName} ${existingAppt.staff.lastName}). Patient kann nicht gleichzeitig in zwei Terminen sein.`);
+              hasOverlap = true;
+              break;
+            }
+          }
+
+          if (hasOverlap) {
             continue;
           }
 

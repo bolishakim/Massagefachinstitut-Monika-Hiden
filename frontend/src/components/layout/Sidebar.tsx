@@ -201,20 +201,6 @@ const navigationItems: NavItem[] = [
         href: '/staff/profile',
       },
       {
-        id: 'staff-list',
-        label: 'Mitarbeiter',
-        icon: Users,
-        href: '/staff',
-        requiredRoles: ['admin', 'moderator'],
-      },
-      {
-        id: 'staff-schedules',
-        label: 'Arbeitszeiten',
-        icon: Clock,
-        href: '/staff/schedules',
-        requiredRoles: ['admin', 'moderator'],
-      },
-      {
         id: 'staff-leaves',
         label: 'Urlaub & Ausfall',
         icon: Calendar,

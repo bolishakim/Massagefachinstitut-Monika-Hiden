@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfDay, addDays, subDays, isToday } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, ChevronDown, Calendar, RefreshCw, Settings, Filter, Users, Briefcase, Building2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar, RefreshCw, Plus, Filter, Users, Briefcase, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -30,8 +30,6 @@ export function CalendarPage() {
   const [showStaffFilter, setShowStaffFilter] = useState(false);
   const [showServiceFilter, setShowServiceFilter] = useState(false);
   const [showRoomFilter, setShowRoomFilter] = useState(false);
-  const [filtersInitialized, setFiltersInitialized] = useState(false);
-
   // Load staff, services, and rooms data
   useEffect(() => {
     loadFilterData();
@@ -42,7 +40,6 @@ export function CalendarPage() {
       // Load daily schedule which includes staff members
       const scheduleRes = await calendarService.getDailySchedule(currentDate);
       if (scheduleRes.success && scheduleRes.data) {
-        console.log('Loaded staff members:', scheduleRes.data.staffMembers);
         const loadedStaff = scheduleRes.data.staffMembers || [];
         setStaffMembers(loadedStaff);
         
@@ -62,14 +59,6 @@ export function CalendarPage() {
           { id: 'room4', name: 'Infrarot Kabine' },
         ];
         setRooms(loadedRooms);
-        
-        // Initialize all filters as selected if not already initialized
-        if (!filtersInitialized) {
-          setSelectedStaff(loadedStaff.map(s => s.id));
-          setSelectedServices(loadedServices.map(s => s.id));
-          setSelectedRooms(loadedRooms.map(r => r.id));
-          setFiltersInitialized(true);
-        }
       }
     } catch (error) {
       console.error('Error loading filter data:', error);
@@ -100,12 +89,10 @@ export function CalendarPage() {
 
   // Handle staff selection
   const toggleStaffSelection = (staffId: string) => {
-    console.log('Toggling staff selection for ID:', staffId);
     setSelectedStaff(prev => {
       const newSelection = prev.includes(staffId) 
         ? prev.filter(id => id !== staffId)
         : [...prev, staffId];
-      console.log('New staff selection:', newSelection);
       return newSelection;
     });
   };
@@ -155,19 +142,16 @@ export function CalendarPage() {
             size="sm"
             onClick={handleRefresh}
             disabled={isLoading}
-            className="gap-2"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Aktualisieren
           </Button>
           
           <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
+            onClick={() => window.location.href = '/appointments/new'}
+            className="flex items-center gap-2"
           >
-            <Settings className="h-4 w-4" />
-            Einstellungen
+            <Plus className="h-4 w-4" />
+            Neuer Termin
           </Button>
         </div>
       </div>

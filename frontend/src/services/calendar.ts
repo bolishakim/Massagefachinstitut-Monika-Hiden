@@ -58,11 +58,9 @@ class CalendarService {
   async getDailySchedule(date: Date): Promise<CalendarApiResponse<StaffScheduleData>> {
     try {
       const formattedDate = format(date, 'yyyy-MM-dd');
-      console.log('Fetching daily schedule for date:', formattedDate);
       const response = await apiService.get<CalendarApiResponse<StaffScheduleData>>(
         `${this.baseUrl}/daily-schedule?date=${formattedDate}`
       );
-      console.log('Daily schedule API response:', response);
       return response;
     } catch (error) {
       console.error('Error fetching daily schedule:', error);

@@ -2,6 +2,26 @@ import { Request, Response } from 'express';
 import prisma from '../utils/db.js';
 import { PackageUpdater } from '../utils/packageUpdater.js';
 
+// Helper function to convert time string (HH:MM) to minutes since midnight
+function timeToMinutes(timeString: string): number {
+  const [hours, minutes] = timeString.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+// Helper function to check if two time intervals overlap
+function intervalsOverlap(start1: number, end1: number, start2: number, end2: number): boolean {
+  return start1 < end2 && end1 > start2;
+}
+
+// Helper function to calculate end time
+function calculateEndTime(startTime: string, duration: number): string {
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + duration;
+  const endHours = Math.floor(totalMinutes / 60);
+  const endMinutes = totalMinutes % 60;
+  return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+}
+
 interface AuthRequest extends Request {
   user?: {
     id: string;
@@ -314,13 +334,19 @@ export const appointmentController = {
         }
       }
 
-      // Check for duplicate appointment (same patient at same date and time - regardless of package, room, or therapist)
-      const existingAppointment = await prisma.appointment.findFirst({
+      // Calculate new appointment end time
+      const endTime = calculateEndTime(startTime, service.duration);
+      
+      // Check for overlapping appointments for the same patient (same patient cannot be in two places at once)
+      // Convert time strings to minutes for accurate comparison
+      const startMinutes = timeToMinutes(startTime);
+      const endMinutes = timeToMinutes(endTime);
+      
+      const patientAppointments = await prisma.appointment.findMany({
         where: {
           patientId,
           scheduledDate: new Date(scheduledDate),
-          startTime,
-          status: { not: 'CANCELLED' } // Exclude cancelled appointments
+          status: { not: 'CANCELLED' }, // Exclude cancelled appointments
         },
         include: {
           patient: {
@@ -343,19 +369,18 @@ export const appointmentController = {
         }
       });
 
-      if (existingAppointment) {
-        return res.status(400).json({
-          success: false,
-          error: `Der Patient ${existingAppointment.patient.firstName} ${existingAppointment.patient.lastName} hat bereits einen Termin am ${new Date(scheduledDate).toLocaleDateString('de-DE')} um ${startTime} Uhr (${existingAppointment.service.name} mit ${existingAppointment.staff.firstName} ${existingAppointment.staff.lastName}). Ein Patient kann nicht zwei Termine zur gleichen Zeit haben.`
-        });
+      // Check each existing appointment for overlap
+      for (const existingAppt of patientAppointments) {
+        const existingStartMinutes = timeToMinutes(existingAppt.startTime);
+        const existingEndMinutes = timeToMinutes(existingAppt.endTime);
+        
+        if (intervalsOverlap(startMinutes, endMinutes, existingStartMinutes, existingEndMinutes)) {
+          return res.status(400).json({
+            success: false,
+            error: `Der Patient ${existingAppt.patient.firstName} ${existingAppt.patient.lastName} hat bereits einen überlappenden Termin am ${new Date(scheduledDate).toLocaleDateString('de-DE')} von ${existingAppt.startTime} bis ${existingAppt.endTime} Uhr (${existingAppt.service.name} mit ${existingAppt.staff.firstName} ${existingAppt.staff.lastName}). Ein Patient kann nicht gleichzeitig in zwei Terminen sein.`
+          });
+        }
       }
-
-      // Calculate end time
-      const [hours, minutes] = startTime.split(':').map(Number);
-      const totalMinutes = hours * 60 + minutes + service.duration;
-      const endHours = Math.floor(totalMinutes / 60);
-      const endMinutes = totalMinutes % 60;
-      const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
 
       const appointment = await prisma.appointment.create({
         data: {

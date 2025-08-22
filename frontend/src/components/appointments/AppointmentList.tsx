@@ -340,11 +340,10 @@ export function AppointmentList({
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={onRefresh}>
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Aktualisieren
+            <RotateCcw className="h-4 w-4" />
           </Button>
-          <Button onClick={onCreateNew} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={onCreateNew} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
             Neuer Termin
           </Button>
         </div>

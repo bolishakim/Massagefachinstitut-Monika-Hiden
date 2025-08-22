@@ -41,31 +41,6 @@ export function DailyScheduleView({
     loadScheduleData();
   }, [date, userId]);
 
-  // Debug log appointments to see their structure (moved to top level)
-  React.useEffect(() => {
-    if (scheduleData?.appointments && scheduleData.appointments.length > 0) {
-      console.log('Sample appointment data:', scheduleData.appointments[0]);
-      console.log('All appointments:', scheduleData.appointments);
-      const occupied = getOccupiedSlots(scheduleData.appointments);
-      console.log('Occupied slots map:', Array.from(occupied.entries()));
-      
-      // Log detailed slot calculation for each appointment
-      scheduleData.appointments.forEach(apt => {
-        if (apt.status !== 'CANCELLED') {
-          const duration = apt.service?.duration || 30;
-          const slotsNeeded = Math.ceil(duration / 15);
-          console.log(`Appointment ${apt.id}: Duration=${duration}min, SlotsNeeded=${slotsNeeded}, StartTime=${apt.startTime}, StaffId=${apt.staffId}`);
-          
-          const startTime = parse(apt.startTime, 'HH:mm', new Date());
-          for (let i = 0; i < slotsNeeded; i++) {
-            const slotTime = addMinutes(startTime, i * 15);
-            const slotKey = `${apt.staffId}-${format(slotTime, 'HH:mm')}`;
-            console.log(`  - Reserving slot: ${slotKey}`);
-          }
-        }
-      });
-    }
-  }, [scheduleData?.appointments]);
 
   const loadScheduleData = async () => {
     try {
@@ -339,9 +314,9 @@ export function DailyScheduleView({
                       }`}
                       onClick={() => {
                         if (slot.status === 'available') {
-                          console.log('Create appointment:', staff.id, timeSlot);
+                          // Handle create appointment
                         } else if (slot.appointment) {
-                          console.log('View appointment:', slot.appointment);
+                          // Handle view appointment
                         }
                       }}
                     >

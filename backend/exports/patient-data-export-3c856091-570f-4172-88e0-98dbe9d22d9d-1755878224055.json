@@ -1,0 +1,42 @@
+{
+  "patient": {
+    "id": "3c856091-570f-4172-88e0-98dbe9d22d9d",
+    "firstName": "David ",
+    "lastName": "Schneeberger",
+    "dateOfBirth": "1997-06-27T00:00:00.000Z",
+    "email": "dschneeberger97@gmx.at",
+    "phone": "+436641488558",
+    "address": "Radelsdorf 21",
+    "socialInsuranceNumber": null,
+    "notes": "",
+    "doctorReferral": "",
+    "insuranceType": "SELF_PAY",
+    "createdById": "98f4cbd0-a74b-42dc-9c1b-6ec42bb84b22",
+    "modifiedById": null,
+    "isActive": true,
+    "createdAt": "2025-08-22T15:56:53.805Z",
+    "updatedAt": "2025-08-22T15:56:53.805Z",
+    "appointments": [],
+    "patientHistory": [],
+    "packages": [],
+    "payments": [],
+    "createdBy": {
+      "id": "98f4cbd0-a74b-42dc-9c1b-6ec42bb84b22",
+      "firstName": "Admin",
+      "lastName": "USER"
+    }
+  },
+  "exportMetadata": {
+    "exportedAt": "2025-08-22T15:57:04.055Z",
+    "requestedBy": "98f4cbd0-a74b-42dc-9c1b-6ec42bb84b22",
+    "patientId": "3c856091-570f-4172-88e0-98dbe9d22d9d",
+    "dataTypes": [
+      "patient_profile",
+      "medical_history",
+      "appointments",
+      "packages",
+      "payments"
+    ],
+    "legalBasis": "GDPR Article 20 - Data Portability"
+  }
+}
