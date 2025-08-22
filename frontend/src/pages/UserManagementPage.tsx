@@ -104,7 +104,8 @@ export function UserManagementPage() {
       const createData: CreateUserRequest = {
         firstName: userData.firstName,
         lastName: userData.lastName,
-        email: userData.email,
+        username: userData.username,
+        email: userData.email || undefined, // Only include email if provided
         password: userData.password!,
         role: userData.role,
       };
@@ -135,7 +136,8 @@ export function UserManagementPage() {
       const updateData: UpdateUserRequest = {
         firstName: userData.firstName,
         lastName: userData.lastName,
-        email: userData.email,
+        username: userData.username,
+        email: userData.email || undefined, // Only include email if provided
         role: userData.role,
       };
 
@@ -283,7 +285,7 @@ export function UserManagementPage() {
                 <div className="relative w-full">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Benutzer nach Name oder E-Mail suchen..."
+                    placeholder="Benutzer nach Name, Benutzername oder E-Mail suchen..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 w-full h-10"
@@ -381,7 +383,7 @@ export function UserManagementPage() {
                     <th className="text-left py-3 px-4 font-medium">Benutzer</th>
                     <th className="text-left py-3 px-4 font-medium">Rolle</th>
                     <th className="text-left py-3 px-4 font-medium">Status</th>
-                    <th className="text-left py-3 px-4 font-medium">Verifiziert</th>
+                    <th className="text-left py-3 px-4 font-medium">E-Mail Status</th>
                     <th className="text-left py-3 px-4 font-medium">Erstellt</th>
                     <th className="text-right py-3 px-4 font-medium">Aktionen</th>
                   </tr>
@@ -408,7 +410,7 @@ export function UserManagementPage() {
                               {user.firstName} {user.lastName}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {user.email}
+                              @{user.username || user.email || 'Kein Benutzername'}
                             </div>
                           </div>
                         </div>
@@ -440,16 +442,23 @@ export function UserManagementPage() {
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                            user.emailVerified
-                              ? 'text-green-600 bg-green-100 dark:bg-green-900/20'
-                              : 'text-orange-600 bg-orange-100 dark:bg-orange-900/20'
-                          }`}
-                        >
-                          <Mail className="h-3 w-3" />
-                          {user.emailVerified ? 'Verifiziert' : 'Ausstehend'}
-                        </span>
+                        {user.email ? (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                              user.emailVerified
+                                ? 'text-green-600 bg-green-100 dark:bg-green-900/20'
+                                : 'text-orange-600 bg-orange-100 dark:bg-orange-900/20'
+                            }`}
+                          >
+                            <Mail className="h-3 w-3" />
+                            {user.emailVerified ? 'Verifiziert' : 'Ausstehend'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-gray-600 bg-gray-100 dark:bg-gray-900/20">
+                            <Mail className="h-3 w-3" />
+                            Keine E-Mail
+                          </span>
+                        )}
                       </td>
                       <td className="py-4 px-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">

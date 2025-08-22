@@ -19,6 +19,7 @@ import { AppointmentsPage, AppointmentFormPage, AppointmentDetailPage, Appointme
 import { ServicesManagementPage } from '@/pages/ServicesManagementPage';
 import { RoomsManagementPage } from '@/pages/RoomsManagementPage';
 import { StaffProfilePage } from '@/pages/StaffProfilePage';
+import { StaffScheduleManagement } from '@/pages/StaffScheduleManagement';
 import { AuditLogsPage } from '@/pages/AuditLogsPage';
 import { CalendarPage } from '@/pages/calendar/CalendarPage';
 import { Role } from '@/types';
@@ -216,6 +217,17 @@ function App() {
                 <ProtectedRoute requiredRoles={[Role.ADMIN, Role.MODERATOR]}>
                   <LayoutWrapper>
                     <UserManagementPage />
+                  </LayoutWrapper>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/settings/staff-schedules"
+              element={
+                <ProtectedRoute requiredRoles={[Role.ADMIN]}>
+                  <LayoutWrapper>
+                    <StaffScheduleManagement />
                   </LayoutWrapper>
                 </ProtectedRoute>
               }

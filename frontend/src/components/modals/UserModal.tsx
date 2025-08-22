@@ -21,15 +21,16 @@ interface UserModalProps {
 export interface UserFormData {
   firstName: string;
   lastName: string;
-  email: string;
+  username: string;
+  email?: string;
   role: Role;
   password?: string;
 }
 
 const roleOptions = [
-  { value: Role.USER, label: 'User' },
+  { value: Role.USER, label: 'Benutzer' },
   { value: Role.MODERATOR, label: 'Moderator' },
-  { value: Role.ADMIN, label: 'Admin' },
+  { value: Role.ADMIN, label: 'Administrator' },
 ];
 
 export function UserModal({ 
@@ -45,6 +46,7 @@ export function UserModal({
   const [formData, setFormData] = useState<UserFormData>({
     firstName: '',
     lastName: '',
+    username: '',
     email: '',
     role: Role.USER,
     password: '',
@@ -58,7 +60,8 @@ export function UserModal({
       setFormData({
         firstName: user.firstName,
         lastName: user.lastName,
-        email: user.email,
+        username: user.username || '',
+        email: user.email || '',
         role: user.role,
         password: '',
       });
@@ -66,6 +69,7 @@ export function UserModal({
       setFormData({
         firstName: '',
         lastName: '',
+        username: '',
         email: '',
         role: Role.USER,
         password: '',
@@ -78,27 +82,38 @@ export function UserModal({
     const newErrors: Partial<UserFormData> = {};
 
     if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = 'Vorname ist erforderlich';
     } else if (formData.firstName.length > 50) {
-      newErrors.firstName = 'First name is too long';
+      newErrors.firstName = 'Vorname ist zu lang';
     }
 
     if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
+      newErrors.lastName = 'Nachname ist erforderlich';
     } else if (formData.lastName.length > 50) {
-      newErrors.lastName = 'Last name is too long';
+      newErrors.lastName = 'Nachname ist zu lang';
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+    if (!formData.username.trim()) {
+      newErrors.username = 'Benutzername ist erforderlich';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Benutzername muss mindestens 3 Zeichen lang sein';
+    } else if (formData.username.length > 30) {
+      newErrors.username = 'Benutzername ist zu lang';
+    } else if (!/^[a-zA-Z0-9._-]+$/.test(formData.username)) {
+      newErrors.username = 'Benutzername darf nur Buchstaben, Zahlen, Punkte, Unterstriche und Bindestriche enthalten';
+    }
+
+    // Email is optional now
+    if (formData.email && formData.email.trim()) {
+      if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        newErrors.email = 'Bitte geben Sie eine gültige E-Mail-Adresse ein';
+      }
     }
 
     if (!isEditMode && !formData.password) {
-      newErrors.password = 'Password is required for new users';
+      newErrors.password = 'Passwort ist für neue Benutzer erforderlich';
     } else if (formData.password && formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = 'Passwort muss mindestens 8 Zeichen lang sein';
     }
 
     setErrors(newErrors);
@@ -126,6 +141,7 @@ export function UserModal({
     setFormData({
       firstName: '',
       lastName: '',
+      username: '',
       email: '',
       role: Role.USER,
       password: '',
@@ -134,7 +150,7 @@ export function UserModal({
     onClose();
   };
 
-  const modalTitle = title || (isEditMode ? 'Edit User' : 'Add New User');
+  const modalTitle = title || (isEditMode ? 'Benutzer bearbeiten' : 'Neuen Benutzer hinzufügen');
 
   return (
     <Modal 
@@ -165,8 +181,8 @@ export function UserModal({
           <Stack space="md">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="First Name"
-                placeholder="Enter first name"
+                label="Vorname"
+                placeholder="Vorname eingeben"
                 value={formData.firstName}
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                 error={errors.firstName}
@@ -174,8 +190,8 @@ export function UserModal({
                 required
               />
               <Input
-                label="Last Name"
-                placeholder="Enter last name"
+                label="Nachname"
+                placeholder="Nachname eingeben"
                 value={formData.lastName}
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                 error={errors.lastName}
@@ -185,40 +201,51 @@ export function UserModal({
             </div>
 
             <Input
-              label="Email Address"
+              label="Benutzername"
+              placeholder="Benutzername eingeben"
+              value={formData.username}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              error={errors.username}
+              disabled={isSubmitting}
+              required
+              helperText="Für die Anmeldung verwendet. Mindestens 3 Zeichen, nur Buchstaben, Zahlen, Punkte, Unterstriche und Bindestriche."
+            />
+
+            <Input
+              label="E-Mail-Adresse"
               type="email"
-              placeholder="Enter email address"
+              placeholder="E-Mail-Adresse eingeben (optional)"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               error={errors.email}
               disabled={isSubmitting}
-              required
+              helperText="Optional - wird für Benachrichtigungen verwendet, falls angegeben"
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Role
+                  Rolle
                   <span className="text-red-500 ml-1">*</span>
                 </label>
                 <Select
                   options={roleOptions}
                   value={formData.role}
                   onChange={(value) => setFormData({ ...formData, role: value as Role })}
-                  placeholder="Select role"
+                  placeholder="Rolle auswählen"
                   disabled={isSubmitting}
                 />
               </div>
 
               <div className="relative">
                 <label className="block text-sm font-medium mb-2">
-                  Password {!isEditMode && <span className="text-red-500 ml-1">*</span>}
-                  {isEditMode && <span className="text-muted-foreground text-xs">(leave empty to keep current)</span>}
+                  Passwort {!isEditMode && <span className="text-red-500 ml-1">*</span>}
+                  {isEditMode && <span className="text-muted-foreground text-xs">(leer lassen, um das aktuelle zu behalten)</span>}
                 </label>
                 <div className="relative">
                   <Input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder={isEditMode ? 'Enter new password (optional)' : 'Enter password'}
+                    placeholder={isEditMode ? 'Neues Passwort eingeben (optional)' : 'Passwort eingeben'}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     error={errors.password}

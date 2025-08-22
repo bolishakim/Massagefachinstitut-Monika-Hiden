@@ -2,7 +2,8 @@ import { ApiResponse, User, PaginatedResponse } from '@/types';
 import { apiService } from './api';
 
 export interface CreateUserRequest {
-  email: string;
+  username: string;
+  email?: string;
   password: string;
   firstName: string;
   lastName: string;
@@ -12,8 +13,14 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   firstName?: string;
   lastName?: string;
+  username?: string;
   email?: string;
   role?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export class UserService {
@@ -56,6 +63,10 @@ export class UserService {
 
   async getStaffUsers(): Promise<ApiResponse<User[]>> {
     return apiService.get<User[]>('/users?specialization=true&isActive=true');
+  }
+
+  async changePassword(passwordData: ChangePasswordRequest): Promise<ApiResponse<any>> {
+    return apiService.post('/users/change-password', passwordData);
   }
 }
 

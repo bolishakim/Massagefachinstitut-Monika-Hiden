@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Stethoscope, Building2, Users, Shield } from 'lucide-react';
+import { Settings, Stethoscope, Building2, Users, Shield, Clock } from 'lucide-react';
 import { H2, H3, TextMD } from '../components/ui/Typography';
 import { Card } from '../components/ui/Card';
 import { useAuth } from '../hooks/useAuth';
@@ -38,6 +38,14 @@ export function SettingsPage() {
       description: 'Mitarbeiterkonten und Berechtigungen verwalten',
       icon: Users,
       href: '/settings/users',
+      requiredRoles: ['ADMIN'],
+    },
+    {
+      id: 'staff-schedules',
+      title: 'Mitarbeiter Arbeitszeiten',
+      description: 'Arbeitszeiten und Schichtpläne der Mitarbeiter verwalten',
+      icon: Clock,
+      href: '/settings/staff-schedules',
       requiredRoles: ['ADMIN'],
     },
   ];

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { format, parse, addMinutes, isWithinInterval, isSameDay } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { User, Calendar, Clock, AlertCircle, Coffee } from 'lucide-react';
+import { User, Users, Calendar, Clock, AlertCircle, Coffee } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { calendarService } from '@/services/calendar';
@@ -18,9 +18,19 @@ interface DailyScheduleViewProps {
   date: Date;
   userId?: string;
   onRefresh?: () => void;
+  selectedStaffIds?: string[];
+  selectedServiceIds?: string[];
+  selectedRoomIds?: string[];
 }
 
-export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleViewProps) {
+export function DailyScheduleView({ 
+  date, 
+  userId, 
+  onRefresh,
+  selectedStaffIds = [],
+  selectedServiceIds = [],
+  selectedRoomIds = []
+}: DailyScheduleViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [calendarSettings, setCalendarSettings] = useState<CalendarSettings | null>(null);
@@ -35,8 +45,25 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
   React.useEffect(() => {
     if (scheduleData?.appointments && scheduleData.appointments.length > 0) {
       console.log('Sample appointment data:', scheduleData.appointments[0]);
+      console.log('All appointments:', scheduleData.appointments);
       const occupied = getOccupiedSlots(scheduleData.appointments);
       console.log('Occupied slots map:', Array.from(occupied.entries()));
+      
+      // Log detailed slot calculation for each appointment
+      scheduleData.appointments.forEach(apt => {
+        if (apt.status !== 'CANCELLED') {
+          const duration = apt.service?.duration || 30;
+          const slotsNeeded = Math.ceil(duration / 15);
+          console.log(`Appointment ${apt.id}: Duration=${duration}min, SlotsNeeded=${slotsNeeded}, StartTime=${apt.startTime}, StaffId=${apt.staffId}`);
+          
+          const startTime = parse(apt.startTime, 'HH:mm', new Date());
+          for (let i = 0; i < slotsNeeded; i++) {
+            const slotTime = addMinutes(startTime, i * 15);
+            const slotKey = `${apt.staffId}-${format(slotTime, 'HH:mm')}`;
+            console.log(`  - Reserving slot: ${slotKey}`);
+          }
+        }
+      });
     }
   }, [scheduleData?.appointments]);
 
@@ -85,6 +112,37 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
 
     return slots;
   }, [calendarSettings]);
+
+  // Filter staff members based on selection
+  const filteredStaffMembers = useMemo(() => {
+    if (!scheduleData) return [];
+    // If no staff selected, show all (this handles initial state)
+    if (selectedStaffIds.length === 0) return scheduleData.staffMembers;
+    return scheduleData.staffMembers.filter(staff => selectedStaffIds.includes(staff.id));
+  }, [scheduleData?.staffMembers, selectedStaffIds]);
+
+  // Filter appointments based on selections
+  const filteredAppointments = useMemo(() => {
+    if (!scheduleData) return [];
+    let filtered = scheduleData.appointments;
+    
+    // Filter by staff - only apply filter if specific staff are selected
+    if (selectedStaffIds.length > 0) {
+      filtered = filtered.filter(apt => selectedStaffIds.includes(apt.staffId));
+    }
+    
+    // Filter by service - only apply filter if specific services are selected
+    if (selectedServiceIds.length > 0) {
+      filtered = filtered.filter(apt => apt.serviceId && selectedServiceIds.includes(apt.serviceId));
+    }
+    
+    // Filter by room - only apply filter if specific rooms are selected
+    if (selectedRoomIds.length > 0) {
+      filtered = filtered.filter(apt => apt.roomId && selectedRoomIds.includes(apt.roomId));
+    }
+    
+    return filtered;
+  }, [scheduleData?.appointments, selectedStaffIds, selectedServiceIds, selectedRoomIds]);
 
   // Generate all occupied slots for appointments
   const getOccupiedSlots = (appointments: Appointment[]): Map<string, { staffId: string; appointment: Appointment }> => {
@@ -198,8 +256,8 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
 
   const { staffMembers, schedules, leaves, appointments } = scheduleData;
 
-  // Calculate occupied slots once for all appointments
-  const occupiedSlots = getOccupiedSlots(appointments);
+  // Calculate occupied slots once for filtered appointments
+  const occupiedSlots = getOccupiedSlots(filteredAppointments);
 
   return (
     <Card className="p-4 overflow-hidden">
@@ -209,14 +267,23 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
           Tagesplan für {format(date, 'EEEE, dd. MMMM yyyy', { locale: de })}
         </h3>
         <p className="text-muted-foreground">
-          {staffMembers.length} Mitarbeiter • {timeSlots.length} Zeitslots • Scroll horizontal für mehr Mitarbeiter
+          {filteredStaffMembers.length} Mitarbeiter • {timeSlots.length} Zeitslots • Scroll horizontal für mehr Mitarbeiter
         </p>
       </div>
+
+      {/* Show message if no staff members after filtering */}
+      {filteredStaffMembers.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p className="text-lg">Keine Mitarbeiter gefunden</p>
+          <p className="text-sm mt-2">Bitte passen Sie Ihre Filtereinstellungen an</p>
+        </div>
+      ) : (
       
       <div className="overflow-x-auto border rounded-lg">
         <div className="min-w-max bg-background">
           {/* Schedule Grid */}
-          <div className="grid gap-2 p-2" style={{gridTemplateColumns: `160px repeat(${staffMembers.length}, 220px)`}}>
+          <div className="grid gap-2 p-2" style={{gridTemplateColumns: `160px repeat(${filteredStaffMembers.length}, 220px)`}}>
             {/* Time Column Header */}
             <div className="sticky top-0 bg-background z-10 pb-3">
               <div className="flex items-center justify-center gap-2 font-semibold bg-secondary/30 p-3 rounded-lg h-16">
@@ -226,7 +293,7 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
             </div>
             
             {/* Staff Headers */}
-            {staffMembers.map(staff => (
+            {filteredStaffMembers.map(staff => (
               <div key={staff.id} className="sticky top-0 bg-background z-10 pb-3">
                 <div className="p-3 bg-muted rounded-lg h-16 flex flex-col justify-center">
                   <div className="flex items-center gap-2 mb-1">
@@ -253,8 +320,8 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
                 </div>
                 
                 {/* Staff Slots */}
-                {staffMembers.map(staff => {
-                  const slot = getSlotStatus(staff, timeSlot, appointments, schedules, leaves, occupiedSlots);
+                {filteredStaffMembers.map(staff => {
+                  const slot = getSlotStatus(staff, timeSlot, filteredAppointments, schedules, leaves, occupiedSlots);
                   
                   return (
                     <div
@@ -287,21 +354,13 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
                         
                         {slot.status === 'booked' && slot.appointment && (
                           <div className="space-y-0">
-                            {/* Show patient name only in the first slot of the appointment */}
-                            {slot.appointment.startTime === timeSlot ? (
-                              <>
-                                <div className="text-xs font-semibold text-blue-800 dark:text-blue-200 truncate">
-                                  {slot.appointment.patient?.firstName} {slot.appointment.patient?.lastName}
-                                </div>
-                                <div className="text-xs text-blue-600 dark:text-blue-300 truncate">
-                                  {slot.appointment.service?.name} ({slot.appointment.service?.duration || 30}min)
-                                </div>
-                              </>
-                            ) : (
-                              <div className="text-xs text-blue-600 dark:text-blue-300">
-                                ···
-                              </div>
-                            )}
+                            {/* Show full appointment info in all slots */}
+                            <div className="text-xs font-semibold text-blue-800 dark:text-blue-200 truncate">
+                              {slot.appointment.patient?.firstName} {slot.appointment.patient?.lastName}
+                            </div>
+                            <div className="text-xs text-blue-600 dark:text-blue-300 truncate">
+                              {slot.appointment.service?.name} ({slot.appointment.service?.duration || 30}min)
+                            </div>
                           </div>
                         )}
                         
@@ -328,8 +387,10 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
           </div>
         </div>
       </div>
+      )}
       
       {/* Legend */}
+      {filteredStaffMembers.length > 0 && (
       <div className="mt-6 pt-4 border-t">
         <div className="flex flex-wrap gap-4 text-sm">
           <div className="flex items-center gap-2">
@@ -350,6 +411,7 @@ export function DailyScheduleView({ date, userId, onRefresh }: DailyScheduleView
           </div>
         </div>
       </div>
+      )}
     </Card>
   );
 }

@@ -260,6 +260,13 @@ const navigationItems: NavItem[] = [
         requiredRoles: ['admin'],
       },
       {
+        id: 'settings-staff-schedules',
+        label: 'Mitarbeiter Arbeitszeiten',
+        icon: Clock,
+        href: '/settings/staff-schedules',
+        requiredRoles: ['admin'],
+      },
+      {
         id: 'settings-security',
         label: 'Sicherheit',
         icon: Shield,

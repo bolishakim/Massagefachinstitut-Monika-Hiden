@@ -23,6 +23,10 @@ const querySchema = z.object({
     role: z.enum(['USER', 'MODERATOR', 'ADMIN']).optional(),
     isActive: z.string().optional().transform((val) => val === 'true' ? true : val === 'false' ? false : undefined),
 });
+const changePasswordSchema = z.object({
+    currentPassword: z.string().min(1, 'Current password is required'),
+    newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+});
 export const getUsers = async (req, res) => {
     try {
         const { page, limit, search, role, isActive } = querySchema.parse(req.query);
@@ -389,6 +393,77 @@ export const toggleUserStatus = async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to toggle user status',
+        });
+    }
+};
+export const changePassword = async (req, res) => {
+    try {
+        const validatedData = changePasswordSchema.parse(req.body);
+        const { currentPassword, newPassword } = validatedData;
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not authenticated',
+            });
+        }
+        // Get current user with password
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                password: true,
+                isActive: true,
+            },
+        });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found',
+            });
+        }
+        if (!user.isActive) {
+            return res.status(403).json({
+                success: false,
+                error: 'Account is deactivated',
+            });
+        }
+        // Verify current password
+        const isCurrentPasswordValid = await PasswordUtils.compare(currentPassword, user.password);
+        if (!isCurrentPasswordValid) {
+            return res.status(400).json({
+                success: false,
+                error: 'Current password is incorrect',
+            });
+        }
+        // Check if new password is different from current
+        const isSamePassword = await PasswordUtils.compare(newPassword, user.password);
+        if (isSamePassword) {
+            return res.status(400).json({
+                success: false,
+                error: 'New password must be different from current password',
+            });
+        }
+        // Hash new password
+        const hashedNewPassword = await PasswordUtils.hash(newPassword);
+        // Update password
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                password: hashedNewPassword,
+                updatedAt: new Date(),
+            },
+        });
+        res.json({
+            success: true,
+            message: 'Password changed successfully',
+        });
+    }
+    catch (error) {
+        console.error('Error changing password:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to change password',
         });
     }
 };

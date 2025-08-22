@@ -25,6 +25,7 @@ import auditRoutes from './routes/audit.js';
 import mfaRoutes from './routes/mfa.js';
 import gdprRoutes from './routes/gdpr.js';
 import calendarRoutes from './routes/calendar.js';
+import staffScheduleRoutes from './routes/staffSchedules.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -148,6 +149,7 @@ app.use('/api/audit', httpsEnforcement.strict, auditRoutes);
 app.use('/api/mfa', httpsEnforcement.strict, mfaRoutes);
 app.use('/api/gdpr', httpsEnforcement.strict, gdprRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/staff-schedules', staffScheduleRoutes);
 
 // Error handling middleware
 app.use(notFound);

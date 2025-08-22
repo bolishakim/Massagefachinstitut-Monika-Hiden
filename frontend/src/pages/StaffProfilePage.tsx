@@ -28,6 +28,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { MFASettings } from '../components/settings/MFASettings';
 import { GDPRSettings } from '../components/gdpr/GDPRSettings';
+import { userService } from '../services/user';
 
 export function StaffProfilePage() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -45,6 +46,16 @@ export function StaffProfilePage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Password change states
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
   const { theme, setTheme, isDark } = useTheme();
   const { user, updateProfile } = useAuth();
@@ -119,6 +130,68 @@ export function StaffProfilePage() {
       setErrorMessage('Ein unerwarteter Fehler ist aufgetreten.');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handlePasswordFormChange = (field: string, value: string) => {
+    setPasswordForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleChangePassword = async () => {
+    try {
+      setIsChangingPassword(true);
+      setPasswordError(null);
+      setPasswordSuccess(null);
+
+      // Validation
+      if (!passwordForm.currentPassword) {
+        setPasswordError('Aktuelles Passwort ist erforderlich');
+        return;
+      }
+      if (!passwordForm.newPassword) {
+        setPasswordError('Neues Passwort ist erforderlich');
+        return;
+      }
+      if (passwordForm.newPassword.length < 8) {
+        setPasswordError('Neues Passwort muss mindestens 8 Zeichen lang sein');
+        return;
+      }
+      if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+        setPasswordError('Neue Passwörter stimmen nicht überein');
+        return;
+      }
+      if (passwordForm.currentPassword === passwordForm.newPassword) {
+        setPasswordError('Das neue Passwort muss sich vom aktuellen unterscheiden');
+        return;
+      }
+
+      const response = await userService.changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+
+      if (response.success) {
+        setPasswordSuccess('Passwort erfolgreich geändert');
+        // Clear form
+        setPasswordForm({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        });
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => setPasswordSuccess(null), 5000);
+      } else {
+        setPasswordError(response.error || 'Fehler beim Ändern des Passworts');
+      }
+    } catch (error) {
+      console.error('Password change error:', error);
+      setPasswordError('Ein unerwarteter Fehler ist aufgetreten.');
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -322,24 +395,73 @@ export function StaffProfilePage() {
               <Stack space="lg">
                 <div>
                   <H3 className="text-base mb-4">Passwort ändern</H3>
+                  
+                  {/* Password Success Message */}
+                  {passwordSuccess && (
+                    <Alert variant="success" dismissible onDismiss={() => setPasswordSuccess(null)}>
+                      <CheckCircle className="h-4 w-4" />
+                      <div>
+                        <h4 className="font-medium">Erfolg</h4>
+                        <p className="text-sm">{passwordSuccess}</p>
+                      </div>
+                    </Alert>
+                  )}
+
+                  {/* Password Error Message */}
+                  {passwordError && (
+                    <Alert variant="destructive" dismissible onDismiss={() => setPasswordError(null)}>
+                      <AlertCircle className="h-4 w-4" />
+                      <div>
+                        <h4 className="font-medium">Fehler</h4>
+                        <p className="text-sm">{passwordError}</p>
+                      </div>
+                    </Alert>
+                  )}
+                  
                   <Stack space="md">
                     <Input
                       label="Aktuelles Passwort"
                       type="password"
                       placeholder="Aktuelles Passwort eingeben"
+                      value={passwordForm.currentPassword}
+                      onChange={(e) => handlePasswordFormChange('currentPassword', e.target.value)}
+                      disabled={isChangingPassword}
+                      required
                     />
                     <Input
                       label="Neues Passwort"
                       type="password"
                       placeholder="Neues Passwort eingeben"
+                      value={passwordForm.newPassword}
+                      onChange={(e) => handlePasswordFormChange('newPassword', e.target.value)}
+                      disabled={isChangingPassword}
+                      helperText="Mindestens 8 Zeichen erforderlich"
+                      required
                     />
                     <Input
                       label="Passwort bestätigen"
                       type="password"
                       placeholder="Neues Passwort bestätigen"
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) => handlePasswordFormChange('confirmPassword', e.target.value)}
+                      disabled={isChangingPassword}
+                      required
                     />
-                    <Button variant="primary" size="sm" className="w-fit">
-                      Passwort aktualisieren
+                    <Button 
+                      variant="primary" 
+                      size="sm" 
+                      className="w-fit"
+                      onClick={handleChangePassword}
+                      disabled={isChangingPassword}
+                    >
+                      {isChangingPassword ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Wird aktualisiert...
+                        </>
+                      ) : (
+                        'Passwort aktualisieren'
+                      )}
                     </Button>
                   </Stack>
                 </div>

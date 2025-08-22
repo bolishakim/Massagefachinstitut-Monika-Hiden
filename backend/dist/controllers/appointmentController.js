@@ -229,11 +229,10 @@ export const appointmentController = {
                     conflicts
                 });
             }
-            // Check for duplicate appointment (same patient, package, date, and time)
+            // Check for duplicate appointment (same patient at same date and time - regardless of package, room, or therapist)
             const existingAppointment = await prisma.appointment.findFirst({
                 where: {
                     patientId,
-                    packageId,
                     scheduledDate: new Date(scheduledDate),
                     startTime,
                     status: { not: 'CANCELLED' } // Exclude cancelled appointments
@@ -244,13 +243,24 @@ export const appointmentController = {
                             firstName: true,
                             lastName: true
                         }
+                    },
+                    service: {
+                        select: {
+                            name: true
+                        }
+                    },
+                    staff: {
+                        select: {
+                            firstName: true,
+                            lastName: true
+                        }
                     }
                 }
             });
             if (existingAppointment) {
                 return res.status(400).json({
                     success: false,
-                    error: `Ein Termin für ${existingAppointment.patient.firstName} ${existingAppointment.patient.lastName} mit diesem Paket existiert bereits am ${new Date(scheduledDate).toLocaleDateString('de-DE')} um ${startTime} Uhr.`
+                    error: `Der Patient ${existingAppointment.patient.firstName} ${existingAppointment.patient.lastName} hat bereits einen Termin am ${new Date(scheduledDate).toLocaleDateString('de-DE')} um ${startTime} Uhr (${existingAppointment.service.name} mit ${existingAppointment.staff.firstName} ${existingAppointment.staff.lastName}). Ein Patient kann nicht zwei Termine zur gleichen Zeit haben.`
                 });
             }
             // Create appointment
@@ -380,18 +390,30 @@ export const appointmentController = {
                         errors.push(`Conflict for ${appt.scheduledDate} ${appt.startTime}`);
                         continue;
                     }
-                    // Check for duplicate appointment (same patient, package, date, and time)
+                    // Check for duplicate appointment (same patient at same date and time - regardless of package, room, or therapist)
                     const existingAppointment = await prisma.appointment.findFirst({
                         where: {
                             patientId,
-                            packageId,
                             scheduledDate: new Date(appt.scheduledDate),
                             startTime: appt.startTime,
                             status: { not: 'CANCELLED' }
+                        },
+                        include: {
+                            service: {
+                                select: {
+                                    name: true
+                                }
+                            },
+                            staff: {
+                                select: {
+                                    firstName: true,
+                                    lastName: true
+                                }
+                            }
                         }
                     });
                     if (existingAppointment) {
-                        errors.push(`Termin existiert bereits am ${new Date(appt.scheduledDate).toLocaleDateString('de-DE')} um ${appt.startTime} Uhr`);
+                        errors.push(`Patient hat bereits einen Termin am ${new Date(appt.scheduledDate).toLocaleDateString('de-DE')} um ${appt.startTime} Uhr (${existingAppointment.service.name} mit ${existingAppointment.staff.firstName} ${existingAppointment.staff.lastName})`);
                         continue;
                     }
                     // Create appointment
